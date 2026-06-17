@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Бюджет</title>
+<style>
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #94a3b8;
+  --blue: #3b82f6;
+  --blue-light: #eff6ff;
+  --pink: #ec4899;
+  --pink-light: #fdf2f8;
+  --green: #10b981;
+  --green-light: #f0fdf4;
+  --red: #ef4444;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow);
+}
+header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+.month-nav { display: flex; align-items: center; gap: 10px; }
+.nav-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 30px; height: 30px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s;
+  line-height: 1;
+}
+.nav-btn:hover { background: var(--bg); }
+#month-label { font-size: 15px; font-weight: 600; min-width: 150px; text-align: center; }
+
+/* ── Main ── */
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 56px 24px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.empty-state h2 { font-size: 20px; font-weight: 700; }
+.empty-state p { color: var(--muted); }
+.copy-option {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; cursor: pointer; color: var(--text);
+}
+.copy-option input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue); }
+
+/* ── Summary cards ── */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.s-card {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.s-card-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.s-card-val {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -.5px;
+}
+.s-card.accent {
+  background: var(--blue);
+}
+.s-card.accent .s-card-label { color: rgba(255,255,255,.65); }
+.s-card.accent .s-card-val  { color: #fff; }
+.s-card.accent.red-accent { background: var(--red); }
+
+/* ── Section ── */
+.section {
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.section-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.section-header h2 { font-size: 14px; font-weight: 700; }
+.section-total { font-size: 13px; font-weight: 700; color: var(--muted); }
+
+/* ── Income fields ── */
+.income-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.income-field {
+  padding: 16px 20px;
+  border-right: 1px solid var(--border);
+}
+.income-field:last-child { border-right: none; }
+.income-field label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.income-field input {
+  font-size: 24px;
+  font-weight: 800;
+  border: none; outline: none;
+  width: 100%;
+  color: var(--text);
+  background: transparent;
+  letter-spacing: -.5px;
+}
+.income-field input::placeholder { color: var(--muted); font-weight: 400; font-size: 20px; }
+.income-field input:focus { color: var(--blue); }
+
+/* ── Table ── */
+table { width: 100%; border-collapse: collapse; }
+thead tr { background: #f8fafc; }
+th {
+  padding: 8px 12px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+th.r { text-align: right; }
+td { border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #fafafa; }
+
+.col-name { width: auto; }
+.col-cat  { width: 88px; }
+.col-num  { width: 110px; }
+.col-del  { width: 38px; }
+
+/* cell inputs */
+.ci {
+  border: none; background: transparent;
+  font-size: 14px; font-family: inherit; color: var(--text);
+  padding: 13px 12px; width: 100%; display: block;
+}
+.ci:focus { outline: none; color: var(--blue); }
+.ci.r { text-align: right; }
+td.col-num { cursor: text; }
+.ci[type=number] { -moz-appearance: textfield; }
+.ci[type=number]::-webkit-inner-spin-button,
+.ci[type=number]::-webkit-outer-spin-button { display: none; }
+
+/* category select */
+.cat-sel {
+  border: none; background: transparent;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  cursor: pointer; padding: 9px 8px; width: 100%;
+  -webkit-appearance: none; appearance: none;
+}
+.cat-sel:focus { outline: none; }
+.c-me     { color: var(--blue); }
+.c-nastya { color: var(--pink); }
+.c-shared { color: var(--green); }
+
+/* remaining */
+.rem-cell { padding: 9px 12px; text-align: right; font-weight: 700; font-size: 13px; }
+.rem-pos  { color: var(--green); }
+.rem-neg  { color: var(--red); }
+.rem-zero { color: var(--muted); }
+
+/* delete btn */
+.del-btn {
+  display: block; margin: 0 auto;
+  background: none; border: none;
+  cursor: pointer; color: var(--muted);
+  font-size: 18px; width: 30px; height: 30px;
+  border-radius: 4px; line-height: 30px; text-align: center;
+  transition: color .12s, background .12s;
+}
+.del-btn:hover { color: var(--red); background: #fee2e2; }
+
+/* totals row */
+.totals-row td {
+  padding: 9px 12px; font-weight: 700; font-size: 13px;
+  background: #f8fafc; border-top: 2px solid var(--border);
+}
+.totals-row td.r { text-align: right; }
+
+/* add row */
+.add-row { padding: 10px 16px; border-top: 1px solid var(--border); }
+.add-btn {
+  width: 100%; padding: 7px 12px;
+  background: none; border: 1.5px dashed var(--border);
+  border-radius: 8px; cursor: pointer;
+  color: var(--muted); font-size: 13px; font-family: inherit;
+  transition: all .12s;
+}
+.add-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
+/* category filter tabs */
+.cat-tabs {
+  display: flex; gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.cat-tab {
+  padding: 4px 14px;
+  border-radius: 20px; font-size: 12px; font-weight: 700;
+  cursor: pointer; border: 1.5px solid var(--border);
+  background: none; color: var(--muted);
+  font-family: inherit; transition: all .12s;
+}
+.cat-tab[data-cat=all].active    { background: var(--text);  border-color: var(--text);  color: #fff; }
+.cat-tab[data-cat=me].active     { background: var(--blue);  border-color: var(--blue);  color: #fff; }
+.cat-tab[data-cat=nastya].active { background: var(--pink);  border-color: var(--pink);  color: #fff; }
+.cat-tab[data-cat=shared].active { background: var(--green); border-color: var(--green); color: #fff; }
+
+/* buttons */
+.btn-primary {
+  background: var(--blue); color: #fff;
+  border: none; border-radius: 8px;
+  padding: 10px 28px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: background .12s;
+}
+.btn-primary:hover { background: #2563eb; }
+
+.hidden { display: none !important; }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  header { padding: 0 12px; }
+  main { padding: 16px 10px 40px; gap: 14px; }
+  .summary { grid-template-columns: repeat(2, 1fr); }
+  .s-card:last-child { grid-column: span 2; }
+  .income-grid { grid-template-columns: 1fr; }
+  .income-field { border-right: none; border-bottom: 1px solid var(--border); }
+  .income-field:last-child { border-bottom: none; }
+
+  /* table: category as colored dot, fit columns to viewport */
+  table { table-layout: fixed; }
+  th.col-cat { font-size: 0; padding: 0; width: 40px; }
+  th.col-name { font-size: 0; }
+  td.col-cat { width: 40px; padding: 0; text-align: center; }
+  .cat-sel { width: 22px; height: 22px; border-radius: 50%; padding: 0; font-size: 0; border: none; cursor: pointer; display: inline-block; }
+  .cat-sel.c-me     { background: var(--blue); }
+  .cat-sel.c-nastya { background: var(--pink); }
+  .cat-sel.c-shared { background: var(--green); }
+  .col-num { width: 56px; }
+  .col-del { width: 40px; }
+  th { padding: 7px 4px; }
+  td { padding: 0; }
+  td.col-del { padding: 0; position: relative; }
+  .del-btn { position: absolute; inset: 0; margin: 0; width: 100%; height: 100%; border-radius: 0; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+  .ci { padding: 11px 4px; font-size: 13px; }
+  .rem-cell { padding: 8px 4px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Бюджет</h1>
+  <div class="month-nav">
+    <button class="nav-btn" onclick="shiftMonth(-1)">‹</button>
+    <span id="month-label"></span>
+    <button class="nav-btn" onclick="shiftMonth(1)">›</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Empty state -->
+  <div id="empty-state" class="empty-state hidden">
+    <h2 id="empty-title"></h2>
+    <p>Данных пока нет — создай бюджет для этого месяца</p>
+    <label class="copy-option" id="copy-option" style="display:none">
+      <input type="checkbox" id="copy-cb"> Скопировать план из предыдущего месяца
+    </label>
+    <button class="btn-primary" onclick="createCurrentMonth()">Создать бюджет</button>
+  </div>
+
+  <!-- Budget view -->
+  <div id="budget-view" class="hidden">
+
+    <!-- Summary -->
+    <div class="summary">
+      <div class="s-card">
+        <div class="s-card-label">Получено</div>
+        <div class="s-card-val" id="s-income">0 ₽</div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-label">Обязательные</div>
+        <div class="s-card-val" id="s-mandatory">0 ₽</div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-label">Потрачено</div>
+        <div class="s-card-val" id="s-spent">0 ₽</div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-label">Отложено</div>
+        <div class="s-card-val" id="s-saved">0 ₽</div>
+      </div>
+      <div class="s-card accent" id="s-remain-card">
+        <div class="s-card-label">Остаток</div>
+        <div class="s-card-val" id="s-remain">0 ₽</div>
+      </div>
+    </div>
+
+    <!-- Income & Savings -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Доходы и накопления</h2>
+      </div>
+      <div class="income-grid">
+        <div class="income-field">
+          <label>Получено в этом месяце</label>
+          <input type="number" id="income-inp" placeholder="0 ₽"
+            onblur="saveMonthFields()" onkeydown="enterBlur(event)">
+        </div>
+        <div class="income-field">
+          <label>Отложено в этом месяце</label>
+          <input type="number" id="saved-inp" placeholder="0 ₽"
+            onblur="saveMonthFields()" onkeydown="enterBlur(event)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Mandatory -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Обязательные платежи</h2>
+        <span class="section-total" id="mandatory-total"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-cat">Категория</th>
+            <th class="col-name">Название</th>
+            <th class="r col-num">Сумма</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="mandatory-body"></tbody>
+      </table>
+      <div class="add-row">
+        <button class="add-btn" onclick="addEntry('mandatory')">+ Добавить платёж</button>
+      </div>
+    </div>
+
+    <!-- Planned -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Планируемые траты</h2>
+        <span class="section-total" id="planned-total"></span>
+      </div>
+      <div class="cat-tabs">
+        <button class="cat-tab active" data-cat="all"    onclick="filterCat('all')">Все</button>
+        <button class="cat-tab"        data-cat="me"     onclick="filterCat('me')">Я</button>
+        <button class="cat-tab"        data-cat="nastya" onclick="filterCat('nastya')">Настя</button>
+        <button class="cat-tab"        data-cat="shared" onclick="filterCat('shared')">Общие</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-cat">Категория</th>
+            <th class="col-name">Название</th>
+            <th class="r col-num">План</th>
+            <th class="r col-num">Факт</th>
+            <th class="r col-num">Осталось</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="planned-body"></tbody>
+        <tfoot id="planned-foot"></tfoot>
+      </table>
+      <div class="add-row">
+        <button class="add-btn" onclick="addEntry('planned')">+ Добавить трату</button>
+      </div>
+    </div>
+
+  </div><!-- /budget-view -->
+</main>
+
+<script>
+const MN = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+            'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+const state = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth() + 1,
+  half: 1,
+  monthId: null,
+  income: 0,
+  saved: 0,
+  entries: [],
+  allMonths: [],
+  catFilter: 'all',
+  prevMonthId: null,
+};
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n || 0).toLocaleString('ru-RU') + ' ₽';
+const fmtAbs = n => Math.abs(n).toLocaleString('ru-RU') + ' ₽';
+const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const isMobile = () => window.innerWidth <= 640;
+const fmtK = n => {
+  const abs = Math.abs(n || 0);
+  const sign = n < 0 ? '−' : '';
+  if (abs >= 1000) {
+    const k = abs / 1000;
+    const s = Number.isInteger(k) ? String(k) : k.toFixed(1).replace(/\.0$/, '');
+    return sign + s + 'К ₽';
+  }
+  return sign + abs + ' ₽';
+};
+
+function enterBlur(e) { if (e.key === 'Enter') e.target.blur(); }
+
+function cellKeydown(e, eid) {
+  if (e.key === 'Enter') { e.target.blur(); return; }
+  if (e.key !== 'Tab' || e.shiftKey) return;
+  const tbody = e.target.closest('tbody');
+  if (!tbody) return;
+  const lastRow = [...tbody.querySelectorAll('tr[data-eid]')].at(-1);
+  if (!lastRow || e.target.closest('tr') !== lastRow) return;
+  const focusables = [...lastRow.querySelectorAll('input, select')];
+  if (focusables.at(-1) !== e.target) return;
+  e.preventDefault();
+  addEntry(tbody.id === 'mandatory-body' ? 'mandatory' : 'planned');
+}
+
+// ── API ──────────────────────────────────────────────────────────────────────
+
+const api = {
+  get:  url       => fetch(url).then(r => r.json()),
+  post: (url, b)  => fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}).then(r => r.json()),
+  put:  (url, b)  => fetch(url, {method:'PUT',  headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}).then(r => r.json()),
+  del:  url       => fetch(url, {method:'DELETE'}).then(r => r.json()),
+};
+
+// ── navigation ───────────────────────────────────────────────────────────────
+
+function shiftMonth(dir) {
+  if (dir > 0) {
+    if (state.half === 1) { state.half = 2; }
+    else { state.half = 1; state.month++; if (state.month > 12) { state.month = 1; state.year++; } }
+  } else {
+    if (state.half === 2) { state.half = 1; }
+    else { state.half = 2; state.month--; if (state.month < 1) { state.month = 12; state.year--; } }
+  }
+  loadCurrentMonth();
+}
+
+// ── init / load ───────────────────────────────────────────────────────────────
+
+async function init() {
+  state.allMonths = await api.get('/api/months');
+  await loadCurrentMonth();
+}
+
+async function loadCurrentMonth() {
+  const { year, month, half } = state;
+  $('month-label').textContent = `${MN[month-1]} ${year} · ${half === 1 ? '1-я пол.' : '2-я пол.'}`;
+
+  const found = state.allMonths.find(m => m.year === year && m.month === month && m.half === half);
+
+  if (!found) {
+    const prev = findPrev(year, month, half);
+    state.prevMonthId = prev ? prev.id : null;
+    $('empty-title').textContent = `Бюджет на ${MN[month-1].toLowerCase()} ${year} (${half === 1 ? '1-я пол.' : '2-я пол.'}) не создан`;
+    $('copy-option').style.display = prev ? 'flex' : 'none';
+    $('copy-cb').checked = false;
+    $('empty-state').classList.remove('hidden');
+    $('budget-view').classList.add('hidden');
+    state.monthId = null; state.entries = [];
+    return;
+  }
+
+  $('empty-state').classList.add('hidden');
+  $('budget-view').classList.remove('hidden');
+
+  const data = await api.get(`/api/months/${found.id}`);
+  state.monthId = found.id;
+  state.income  = data.month.income;
+  state.saved   = data.month.saved;
+  state.entries = data.entries;
+
+  $('income-inp').value = state.income || '';
+  $('saved-inp').value  = state.saved  || '';
+
+  renderAll();
+}
+
+function findPrev(year, month, half) {
+  let py = year, pm = month, ph = half - 1;
+  if (ph < 1) { ph = 2; pm--; if (pm < 1) { pm = 12; py--; } }
+  return state.allMonths.find(m => m.year === py && m.month === pm && m.half === ph) || null;
+}
+
+// ── create month ─────────────────────────────────────────────────────────────
+
+async function createCurrentMonth() {
+  const copyId = $('copy-cb').checked ? state.prevMonthId : null;
+  const res = await api.post('/api/months', { year: state.year, month: state.month, half: state.half, copy_from_id: copyId });
+  if (res.error) { alert('Ошибка: ' + res.error); return; }
+  state.allMonths.push(res);
+  loadCurrentMonth();
+}
+
+// ── save income / saved ───────────────────────────────────────────────────────
+
+async function saveMonthFields() {
+  if (!state.monthId) return;
+  const income = parseFloat($('income-inp').value) || 0;
+  const saved  = parseFloat($('saved-inp').value)  || 0;
+  state.income = income; state.saved = saved;
+  await api.put(`/api/months/${state.monthId}`, { income, saved });
+  renderSummary();
+}
+
+// ── filter ────────────────────────────────────────────────────────────────────
+
+function filterCat(cat) {
+  state.catFilter = cat;
+  document.querySelectorAll('.cat-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.cat === cat)
+  );
+  renderPlanned();
+}
+
+// ── render ────────────────────────────────────────────────────────────────────
+
+function renderAll() { renderSummary(); renderMandatory(); renderPlanned(); }
+
+function renderSummary() {
+  const mandatory = state.entries.filter(e => e.type === 'mandatory').reduce((s, e) => s + e.planned, 0);
+  const spent     = state.entries.filter(e => e.type === 'planned').reduce((s, e) => s + e.actual, 0);
+  const remain    = state.income - mandatory - spent - state.saved;
+
+  $('s-income').textContent    = fmt(state.income);
+  $('s-mandatory').textContent = fmt(mandatory);
+  $('s-spent').textContent     = fmt(spent);
+  $('s-saved').textContent     = fmt(state.saved);
+  $('s-remain').textContent    = (remain < 0 ? '−' : '') + fmtAbs(remain);
+
+  const card = $('s-remain-card');
+  card.classList.toggle('red-accent', remain < 0);
+}
+
+function catSel(cat, eid) {
+  const opts = [
+    ['me',     'Я',      'c-me'],
+    ['nastya', 'Настя',  'c-nastya'],
+    ['shared', 'Общие',  'c-shared'],
+  ].map(([v, l, cls]) =>
+    `<option value="${v}" ${cat===v?'selected':''}>${l}</option>`
+  ).join('');
+  return `<select class="cat-sel ${catClass(cat)}" data-eid="${eid}"
+    onchange="onCatChange(${eid},this)">${opts}</select>`;
+}
+
+function catClass(cat) {
+  return cat === 'me' ? 'c-me' : cat === 'nastya' ? 'c-nastya' : 'c-shared';
+}
+
+function renderMandatory() {
+  const rows = state.entries.filter(e => e.type === 'mandatory');
+  const total = rows.reduce((s, e) => s + e.planned, 0);
+  $('mandatory-total').textContent = rows.length ? fmt(total) : '';
+
+  $('mandatory-body').innerHTML = rows.map(e => `
+    <tr data-eid="${e.id}" class="${catClass(e.category)}">
+      <td class="col-cat">${catSel(e.category, e.id)}</td>
+      <td class="col-name">
+        <input class="ci" type="text" value="${esc(e.name)}" placeholder="Название"
+          onblur="saveEntry(${e.id})" onkeydown="cellKeydown(event,${e.id})">
+      </td>
+      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+        <input class="ci r" type="number" value="${e.planned || ''}" placeholder="0"
+          data-field="planned" onblur="saveEntry(${e.id})" onkeydown="cellKeydown(event,${e.id})">
+      </td>
+      <td class="col-del"><button class="del-btn" tabindex="-1" onclick="deleteEntry(${e.id})">×</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderPlanned() {
+  const all      = state.entries.filter(e => e.type === 'planned');
+  const filtered = state.catFilter === 'all' ? all : all.filter(e => e.category === state.catFilter);
+
+  const totPlan   = filtered.reduce((s, e) => s + e.planned, 0);
+  const totActual = filtered.reduce((s, e) => s + e.actual, 0);
+  const totRem    = totPlan - totActual;
+
+  $('planned-total').textContent = filtered.length
+    ? `${fmt(totActual)} из ${fmt(totPlan)}`
+    : '';
+
+  $('planned-body').innerHTML = filtered.map(e => {
+    const rem     = e.planned - e.actual;
+    const remCls  = rem > 0 ? 'rem-pos' : rem < 0 ? 'rem-neg' : 'rem-zero';
+    const remText = e.planned > 0 ? ((rem < 0 ? '−' : '') + fmtAbs(rem)) : '—';
+    return `
+    <tr data-eid="${e.id}" class="${catClass(e.category)}">
+      <td class="col-cat">${catSel(e.category, e.id)}</td>
+      <td class="col-name">
+        <input class="ci" type="text" value="${esc(e.name)}" placeholder="Название"
+          onblur="saveEntry(${e.id})" onkeydown="cellKeydown(event,${e.id})">
+      </td>
+      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+        <input class="ci r" type="number" value="${e.planned || ''}" placeholder="0"
+          data-field="planned" onblur="saveEntry(${e.id})" onkeydown="cellKeydown(event,${e.id})">
+      </td>
+      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+        <input class="ci r" type="number" value="${e.actual || ''}" placeholder="0"
+          data-field="actual" onblur="saveEntry(${e.id})" onkeydown="cellKeydown(event,${e.id})">
+      </td>
+      <td class="col-num"><span class="rem-cell ${remCls}">${remText}</span></td>
+      <td class="col-del"><button class="del-btn" tabindex="-1" onclick="deleteEntry(${e.id})">×</button></td>
+    </tr>`;
+  }).join('');
+
+  const foot = $('planned-foot');
+  if (filtered.length > 1) {
+    const cls = totRem >= 0 ? 'rem-pos' : 'rem-neg';
+    const f = isMobile() ? fmtK : fmt;
+    const fA = isMobile() ? n => fmtK(Math.abs(n)) : fmtAbs;
+    foot.innerHTML = `
+      <tr class="totals-row">
+        <td colspan="2">Итого (${filtered.length})</td>
+        <td class="r">${f(totPlan)}</td>
+        <td class="r">${f(totActual)}</td>
+        <td class="r ${cls}">${(totRem < 0 ? '−' : '') + fA(totRem)}</td>
+        <td></td>
+      </tr>`;
+  } else {
+    foot.innerHTML = '';
+  }
+}
+
+// ── entry CRUD ────────────────────────────────────────────────────────────────
+
+function getRowValues(eid) {
+  const row = document.querySelector(`tr[data-eid="${eid}"]`);
+  if (!row) return null;
+  const entry = state.entries.find(e => e.id === eid);
+  if (!entry) return null;
+  const data = { ...entry };
+  const nameInp = row.querySelector('input[type=text]');
+  if (nameInp) data.name = nameInp.value;
+  row.querySelectorAll('input[type=number]').forEach(inp => {
+    data[inp.dataset.field || 'actual'] = parseFloat(inp.value) || 0;
+  });
+  const sel = row.querySelector('select');
+  if (sel) data.category = sel.value;
+  return data;
+}
+
+async function saveEntry(eid) {
+  const d = getRowValues(eid);
+  if (!d) return;
+  await api.put(`/api/entries/${eid}`, {
+    category: d.category, name: d.name,
+    planned: d.planned || 0, actual: d.actual || 0,
+  });
+  const idx = state.entries.findIndex(e => e.id === eid);
+  if (idx !== -1) state.entries[idx] = { ...state.entries[idx], ...d };
+  renderSummary();
+  if (d.type === 'mandatory') {
+    const total = state.entries.filter(e => e.type === 'mandatory').reduce((s, e) => s + e.planned, 0);
+    $('mandatory-total').textContent = fmt(total);
+  } else {
+    patchPlannedRow(eid);
+  }
+}
+
+function patchPlannedRow(eid) {
+  const entry = state.entries.find(e => e.id === eid);
+  if (!entry) return;
+  const row = document.querySelector(`tr[data-eid="${eid}"]`);
+  if (row) {
+    const rem = entry.planned - entry.actual;
+    const remCls  = rem > 0 ? 'rem-pos' : rem < 0 ? 'rem-neg' : 'rem-zero';
+    const remText = entry.planned > 0 ? ((rem < 0 ? '−' : '') + fmtAbs(rem)) : '—';
+    const span = row.querySelector('.rem-cell');
+    if (span) { span.className = `rem-cell ${remCls}`; span.textContent = remText; }
+  }
+  const all      = state.entries.filter(e => e.type === 'planned');
+  const filtered = state.catFilter === 'all' ? all : all.filter(e => e.category === state.catFilter);
+  const totPlan   = filtered.reduce((s, e) => s + e.planned, 0);
+  const totActual = filtered.reduce((s, e) => s + e.actual, 0);
+  const totRem    = totPlan - totActual;
+  $('planned-total').textContent = filtered.length ? `${fmt(totActual)} из ${fmt(totPlan)}` : '';
+  const foot = $('planned-foot');
+  if (filtered.length > 1) {
+    const cls = totRem >= 0 ? 'rem-pos' : 'rem-neg';
+    const f = isMobile() ? fmtK : fmt;
+    const fA = isMobile() ? n => fmtK(Math.abs(n)) : fmtAbs;
+    foot.innerHTML = `<tr class="totals-row">
+      <td colspan="2">Итого (${filtered.length})</td>
+      <td class="r">${f(totPlan)}</td>
+      <td class="r">${f(totActual)}</td>
+      <td class="r ${cls}">${(totRem < 0 ? '−' : '') + fA(totRem)}</td>
+      <td></td></tr>`;
+  } else { foot.innerHTML = ''; }
+}
+
+async function onCatChange(eid, sel) {
+  const d = getRowValues(eid);
+  if (!d) return;
+  d.category = sel.value;
+  sel.className = `cat-sel ${catClass(sel.value)}`;
+  const tr = sel.closest('tr');
+  if (tr) tr.className = catClass(sel.value);
+  await api.put(`/api/entries/${eid}`, d);
+  const idx = state.entries.findIndex(e => e.id === eid);
+  if (idx !== -1) state.entries[idx].category = d.category;
+  if (d.type === 'planned' && state.catFilter !== 'all') renderPlanned();
+}
+
+async function deleteEntry(eid) {
+  await api.del(`/api/entries/${eid}`);
+  state.entries = state.entries.filter(e => e.id !== eid);
+  renderAll();
+}
+
+async function addEntry(type) {
+  if (!state.monthId) return;
+  const cat = (state.catFilter !== 'all' && type === 'planned') ? state.catFilter : 'shared';
+  const entry = await api.post('/api/entries', {
+    month_id: state.monthId, type, category: cat, name: '', planned: 0, actual: 0,
+  });
+  state.entries.push(entry);
+  if (type === 'mandatory') renderMandatory();
+  else renderPlanned();
+  const input = document.querySelector(`tr[data-eid="${entry.id}"] input[type=text]`);
+  if (input) { input.focus(); }
+}
+
+// ── start ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
