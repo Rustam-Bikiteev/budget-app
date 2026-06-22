@@ -46,6 +46,14 @@ def init_db():
                     actual    REAL DEFAULT 0
                 )
             ''')
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS backlog (
+                    id       SERIAL PRIMARY KEY,
+                    category TEXT NOT NULL DEFAULT 'shared',
+                    name     TEXT NOT NULL DEFAULT '',
+                    planned  REAL DEFAULT 0
+                )
+            ''')
 
 
 init_db()
@@ -168,6 +176,68 @@ def delete_entry(eid):
         with conn.cursor() as cur:
             cur.execute('DELETE FROM entries WHERE id=%s', (eid,))
     return jsonify({'ok': True})
+
+
+@app.route('/api/backlog', methods=['GET'])
+def list_backlog():
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute('SELECT * FROM backlog ORDER BY id')
+            rows = cur.fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/backlog', methods=['POST'])
+def create_backlog():
+    data = request.get_json()
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                'INSERT INTO backlog (category, name, planned) VALUES (%s,%s,%s) RETURNING *',
+                (data.get('category', 'shared'), data.get('name', ''), data.get('planned', 0))
+            )
+            row = cur.fetchone()
+    return jsonify(dict(row)), 201
+
+
+@app.route('/api/backlog/<int:bid>', methods=['PUT'])
+def update_backlog(bid):
+    data = request.get_json()
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                'UPDATE backlog SET category=%s, name=%s, planned=%s WHERE id=%s',
+                (data['category'], data['name'], data.get('planned', 0), bid)
+            )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/backlog/<int:bid>', methods=['DELETE'])
+def delete_backlog(bid):
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM backlog WHERE id=%s', (bid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/backlog/<int:bid>/move', methods=['POST'])
+def move_backlog(bid):
+    data = request.get_json()
+    month_id = data['month_id']
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute('SELECT * FROM backlog WHERE id=%s', (bid,))
+            item = cur.fetchone()
+            if not item:
+                return jsonify({'error': 'not found'}), 404
+            cur.execute(
+                'INSERT INTO entries (month_id, type, category, name, planned, actual)'
+                ' VALUES (%s,%s,%s,%s,%s,0) RETURNING *',
+                (month_id, 'planned', item['category'], item['name'], item['planned'])
+            )
+            entry = dict(cur.fetchone())
+            cur.execute('DELETE FROM backlog WHERE id=%s', (bid,))
+    return jsonify({'entry': entry}), 201
 
 
 if __name__ == '__main__':

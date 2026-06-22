@@ -279,6 +279,109 @@ td.col-num { cursor: text; }
 
 .hidden { display: none !important; }
 
+/* ── Calendar popup ── */
+.cal-wrapper { position: relative; }
+.month-label-btn {
+  font-size: 15px; font-weight: 600; min-width: 190px;
+  background: none; border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 12px; cursor: pointer;
+  color: var(--text); font-family: inherit;
+  transition: background .12s;
+  display: flex; align-items: center; gap: 6px; justify-content: center;
+}
+.month-label-btn:hover { background: var(--bg); }
+.cal-drop-arrow { font-size: 10px; color: var(--muted); }
+.cal-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.13);
+  padding: 12px; z-index: 200; min-width: 300px;
+}
+.cal-year-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.cal-year-nav span { font-weight: 700; font-size: 15px; }
+.cal-year-btn {
+  background: none; border: 1px solid var(--border);
+  border-radius: 6px; width: 28px; height: 28px;
+  cursor: pointer; font-size: 15px; color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s;
+}
+.cal-year-btn:hover { background: var(--bg); }
+.cal-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.cal-month { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; text-align: center; }
+.cal-month-name {
+  font-size: 11px; font-weight: 700; padding: 4px 2px 2px;
+  color: var(--muted); background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+}
+.cal-halves { display: flex; }
+.cal-half {
+  flex: 1; padding: 5px 2px; font-size: 12px; font-weight: 700;
+  background: none; border: none; cursor: pointer;
+  color: var(--text); font-family: inherit;
+  transition: background .12s, color .12s;
+}
+.cal-half:first-child { border-right: 1px solid var(--border); }
+.cal-half:hover { background: var(--blue-light); color: var(--blue); }
+.cal-half.has-data { color: var(--blue); }
+.cal-half.is-current { background: var(--blue); color: #fff !important; }
+.cal-half.is-current:hover { background: #2563eb; }
+
+/* ── Confirm modal ── */
+.confirm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+}
+.confirm-box {
+  background: var(--surface); border-radius: 14px;
+  padding: 24px 28px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  min-width: 280px; max-width: 380px; text-align: center;
+}
+.confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.confirm-name { color: var(--muted); font-size: 13px; margin-bottom: 20px; min-height: 18px; }
+.confirm-btns { display: flex; gap: 10px; justify-content: center; }
+.confirm-cancel {
+  padding: 9px 22px; border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: none; cursor: pointer; font-size: 14px; font-family: inherit;
+  font-weight: 600; color: var(--text); transition: background .12s;
+}
+.confirm-cancel:hover { background: var(--bg); }
+.confirm-ok {
+  padding: 9px 22px; border-radius: 8px; border: none;
+  background: var(--red); color: #fff; cursor: pointer;
+  font-size: 14px; font-family: inherit; font-weight: 700;
+  transition: background .12s;
+}
+.confirm-ok:hover { background: #dc2626; }
+
+/* ── Backlog section ── */
+.backlog-header { cursor: pointer; user-select: none; }
+.backlog-header:hover { background: #fafafa; }
+.backlog-arrow { font-size: 11px; color: var(--muted); margin-right: 6px; }
+.col-move { width: 38px; }
+.move-btn {
+  display: block; margin: 0 auto;
+  background: none; border: none; cursor: pointer;
+  color: var(--green); font-size: 20px; font-weight: 700;
+  width: 30px; height: 30px;
+  border-radius: 4px; line-height: 30px; text-align: center;
+  transition: color .12s, background .12s;
+}
+.move-btn:hover { background: var(--green-light); }
+.move-btn:disabled { color: var(--muted); cursor: default; }
+.move-btn:disabled:hover { background: none; }
+
 /* ── Mobile ── */
 @media (max-width: 640px) {
   header { padding: 0 12px; }
@@ -315,10 +418,35 @@ td.col-num { cursor: text; }
   <h1>Бюджет</h1>
   <div class="month-nav">
     <button class="nav-btn" onclick="shiftMonth(-1)">‹</button>
-    <span id="month-label"></span>
+    <div class="cal-wrapper">
+      <button id="month-label" class="month-label-btn" onclick="toggleCalendar(event)">
+        <span id="month-label-text"></span>
+        <span class="cal-drop-arrow">▾</span>
+      </button>
+      <div id="cal-popup" class="cal-popup hidden">
+        <div class="cal-year-nav">
+          <button class="cal-year-btn" onclick="calPickYear(-1)">‹</button>
+          <span id="cal-year-display"></span>
+          <button class="cal-year-btn" onclick="calPickYear(1)">›</button>
+        </div>
+        <div id="cal-months-grid" class="cal-months"></div>
+      </div>
+    </div>
     <button class="nav-btn" onclick="shiftMonth(1)">›</button>
   </div>
 </header>
+
+<!-- Confirm modal -->
+<div id="confirm-overlay" class="confirm-overlay hidden">
+  <div class="confirm-box">
+    <p class="confirm-title">Удалить запись?</p>
+    <p class="confirm-name" id="confirm-name"></p>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">Отмена</button>
+      <button class="confirm-ok" onclick="execConfirm()">Удалить</button>
+    </div>
+  </div>
+</div>
 
 <main>
 
@@ -400,6 +528,31 @@ td.col-num { cursor: text; }
       </div>
     </div>
 
+    <!-- Backlog -->
+    <div class="section">
+      <div class="section-header backlog-header" onclick="toggleBacklog()">
+        <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Бэклог</h2>
+        <span class="section-total" id="backlog-total"></span>
+      </div>
+      <div id="backlog-content" class="hidden">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-cat">Категория</th>
+              <th class="col-name">Название</th>
+              <th class="r col-num">Сумма</th>
+              <th class="col-move"></th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="backlog-body"></tbody>
+        </table>
+        <div class="add-row">
+          <button class="add-btn" onclick="addBacklogEntry()">+ Добавить в бэклог</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Planned -->
     <div class="section">
       <div class="section-header">
@@ -449,6 +602,7 @@ const state = {
   allMonths: [],
   catFilter: 'all',
   prevMonthId: null,
+  backlog: [],
 };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -510,12 +664,12 @@ function shiftMonth(dir) {
 
 async function init() {
   state.allMonths = await api.get('/api/months');
-  await loadCurrentMonth();
+  await Promise.all([loadCurrentMonth(), loadBacklog()]);
 }
 
 async function loadCurrentMonth() {
   const { year, month, half } = state;
-  $('month-label').textContent = `${MN[month-1]} ${year} · ${half === 1 ? '1-я пол.' : '2-я пол.'}`;
+  $('month-label-text').textContent = `${MN[month-1]} ${year} · ${half === 1 ? '1-я пол.' : '2-я пол.'}`;
 
   const found = state.allMonths.find(m => m.year === year && m.month === month && m.half === half);
 
@@ -773,10 +927,13 @@ async function onCatChange(eid, sel) {
   if (d.type === 'planned' && state.catFilter !== 'all') renderPlanned();
 }
 
-async function deleteEntry(eid) {
-  await api.del(`/api/entries/${eid}`);
-  state.entries = state.entries.filter(e => e.id !== eid);
-  renderAll();
+function deleteEntry(eid) {
+  const entry = state.entries.find(e => e.id === eid);
+  openConfirm(entry?.name, async () => {
+    await api.del(`/api/entries/${eid}`);
+    state.entries = state.entries.filter(e => e.id !== eid);
+    renderAll();
+  });
 }
 
 async function addEntry(type) {
@@ -790,6 +947,193 @@ async function addEntry(type) {
   else renderPlanned();
   const input = document.querySelector(`tr[data-eid="${entry.id}"] input[type=text]`);
   if (input) { input.focus(); }
+}
+
+// ── calendar ─────────────────────────────────────────────────────────────────
+
+let calYear = new Date().getFullYear();
+let calOpen = false;
+
+function toggleCalendar(e) {
+  e.stopPropagation();
+  calOpen = !calOpen;
+  if (calOpen) {
+    calYear = state.year;
+    renderCalendar();
+    $('cal-popup').classList.remove('hidden');
+  } else {
+    $('cal-popup').classList.add('hidden');
+  }
+}
+
+document.addEventListener('click', e => {
+  if (calOpen && !e.target.closest('.cal-wrapper')) {
+    calOpen = false;
+    $('cal-popup').classList.add('hidden');
+  }
+});
+
+function calPickYear(dir) {
+  calYear += dir;
+  renderCalendar();
+}
+
+function renderCalendar() {
+  $('cal-year-display').textContent = calYear;
+  const short = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  $('cal-months-grid').innerHTML = short.map((mn, i) => {
+    const m = i + 1;
+    const h1has = state.allMonths.some(x => x.year === calYear && x.month === m && x.half === 1);
+    const h2has = state.allMonths.some(x => x.year === calYear && x.month === m && x.half === 2);
+    const h1cur = state.year === calYear && state.month === m && state.half === 1;
+    const h2cur = state.year === calYear && state.month === m && state.half === 2;
+    return `<div class="cal-month">
+      <div class="cal-month-name">${mn}</div>
+      <div class="cal-halves">
+        <button class="cal-half ${h1has ? 'has-data' : ''} ${h1cur ? 'is-current' : ''}"
+          onclick="pickPeriod(${calYear},${m},1)">1</button>
+        <button class="cal-half ${h2has ? 'has-data' : ''} ${h2cur ? 'is-current' : ''}"
+          onclick="pickPeriod(${calYear},${m},2)">2</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function pickPeriod(y, m, h) {
+  state.year = y; state.month = m; state.half = h;
+  calOpen = false;
+  $('cal-popup').classList.add('hidden');
+  loadCurrentMonth();
+}
+
+// ── confirm modal ─────────────────────────────────────────────────────────────
+
+let confirmCallback = null;
+
+function openConfirm(name, callback) {
+  confirmCallback = callback;
+  $('confirm-name').textContent = name ? `«${name}»` : '';
+  $('confirm-overlay').classList.remove('hidden');
+}
+
+function closeConfirm() {
+  $('confirm-overlay').classList.add('hidden');
+  confirmCallback = null;
+}
+
+function execConfirm() {
+  if (confirmCallback) confirmCallback();
+  closeConfirm();
+}
+
+// ── backlog ───────────────────────────────────────────────────────────────────
+
+let backlogOpen = false;
+
+function toggleBacklog() {
+  backlogOpen = !backlogOpen;
+  $('backlog-content').classList.toggle('hidden', !backlogOpen);
+  $('backlog-arrow').textContent = backlogOpen ? '▾' : '▸';
+}
+
+async function loadBacklog() {
+  state.backlog = await api.get('/api/backlog');
+  renderBacklog();
+}
+
+function renderBacklog() {
+  const total = state.backlog.reduce((s, b) => s + b.planned, 0);
+  $('backlog-total').textContent = state.backlog.length ? fmt(total) : '';
+  $('backlog-body').innerHTML = state.backlog.map(b => `
+    <tr data-bid="${b.id}" class="${catClass(b.category)}">
+      <td class="col-cat">${backlogCatSel(b.category, b.id)}</td>
+      <td class="col-name">
+        <input class="ci" type="text" value="${esc(b.name)}" placeholder="Название"
+          onblur="saveBacklogEntry(${b.id})" onkeydown="if(event.key==='Enter')event.target.blur()">
+      </td>
+      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+        <input class="ci r" type="number" value="${b.planned || ''}" placeholder="0"
+          data-field="planned" onblur="saveBacklogEntry(${b.id})" onkeydown="if(event.key==='Enter')event.target.blur()">
+      </td>
+      <td class="col-move">
+        <button class="move-btn" tabindex="-1" title="Перенести в планируемые"
+          onclick="moveBacklogEntry(${b.id})" ${!state.monthId ? 'disabled' : ''}>+</button>
+      </td>
+      <td class="col-del">
+        <button class="del-btn" tabindex="-1" onclick="deleteBacklogEntry(${b.id})">×</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function backlogCatSel(cat, bid) {
+  const opts = [['me','Я'],['nastya','Настя'],['shared','Общие']]
+    .map(([v,l]) => `<option value="${v}" ${cat===v?'selected':''}>${l}</option>`).join('');
+  return `<select class="cat-sel ${catClass(cat)}" onchange="onBacklogCatChange(${bid},this)">${opts}</select>`;
+}
+
+async function onBacklogCatChange(bid, sel) {
+  const item = state.backlog.find(b => b.id === bid);
+  if (!item) return;
+  item.category = sel.value;
+  sel.className = `cat-sel ${catClass(sel.value)}`;
+  const tr = sel.closest('tr');
+  if (tr) tr.className = catClass(sel.value);
+  await api.put(`/api/backlog/${bid}`, { category: item.category, name: item.name, planned: item.planned });
+}
+
+function getBacklogRowValues(bid) {
+  const row = document.querySelector(`tr[data-bid="${bid}"]`);
+  if (!row) return null;
+  const item = state.backlog.find(b => b.id === bid);
+  if (!item) return null;
+  const d = { ...item };
+  const nameInp = row.querySelector('input[type=text]');
+  if (nameInp) d.name = nameInp.value;
+  const numInp = row.querySelector('input[type=number]');
+  if (numInp) d.planned = parseFloat(numInp.value) || 0;
+  const sel = row.querySelector('select');
+  if (sel) d.category = sel.value;
+  return d;
+}
+
+async function saveBacklogEntry(bid) {
+  const d = getBacklogRowValues(bid);
+  if (!d) return;
+  await api.put(`/api/backlog/${bid}`, { category: d.category, name: d.name, planned: d.planned });
+  const idx = state.backlog.findIndex(b => b.id === bid);
+  if (idx !== -1) state.backlog[idx] = { ...state.backlog[idx], ...d };
+  $('backlog-total').textContent = state.backlog.length
+    ? fmt(state.backlog.reduce((s, b) => s + b.planned, 0)) : '';
+}
+
+async function addBacklogEntry() {
+  const item = await api.post('/api/backlog', { category: 'shared', name: '', planned: 0 });
+  state.backlog.push(item);
+  if (!backlogOpen) toggleBacklog();
+  renderBacklog();
+  const input = document.querySelector(`tr[data-bid="${item.id}"] input[type=text]`);
+  if (input) input.focus();
+}
+
+function deleteBacklogEntry(bid) {
+  const item = state.backlog.find(b => b.id === bid);
+  openConfirm(item?.name, async () => {
+    await api.del(`/api/backlog/${bid}`);
+    state.backlog = state.backlog.filter(b => b.id !== bid);
+    renderBacklog();
+  });
+}
+
+async function moveBacklogEntry(bid) {
+  if (!state.monthId) return;
+  const res = await api.post(`/api/backlog/${bid}/move`, { month_id: state.monthId });
+  if (res.error) { alert('Ошибка: ' + res.error); return; }
+  state.backlog = state.backlog.filter(b => b.id !== bid);
+  state.entries.push(res.entry);
+  renderBacklog();
+  renderPlanned();
+  renderSummary();
 }
 
 // ── start ─────────────────────────────────────────────────────────────────────
