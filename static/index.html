@@ -381,6 +381,15 @@ td.col-num { cursor: text; }
 .move-btn:hover { background: var(--green-light); }
 .move-btn:disabled { color: var(--muted); cursor: default; }
 .move-btn:disabled:hover { background: none; }
+.tobacklog-btn {
+  display: block; margin: 0 auto;
+  background: none; border: none; cursor: pointer;
+  color: #f59e0b; font-size: 16px; font-weight: 700;
+  width: 30px; height: 30px;
+  border-radius: 4px; line-height: 30px; text-align: center;
+  transition: color .12s, background .12s;
+}
+.tobacklog-btn:hover { background: #fffbeb; color: #d97706; }
 
 /* ── Mobile ── */
 @media (max-width: 640px) {
@@ -573,6 +582,7 @@ td.col-num { cursor: text; }
             <th class="r col-num">План</th>
             <th class="r col-num">Факт</th>
             <th class="r col-num">Осталось</th>
+            <th class="col-move"></th>
             <th class="col-del"></th>
           </tr>
         </thead>
@@ -825,6 +835,7 @@ function renderPlanned() {
           data-field="actual" onblur="saveEntry(${e.id})" onkeydown="cellKeydown(event,${e.id})">
       </td>
       <td class="col-num"><span class="rem-cell ${remCls}">${remText}</span></td>
+      <td class="col-move"><button class="tobacklog-btn" tabindex="-1" title="В бэклог" onclick="entryToBacklog(${e.id})">↓</button></td>
       <td class="col-del"><button class="del-btn" tabindex="-1" onclick="deleteEntry(${e.id})">×</button></td>
     </tr>`;
   }).join('');
@@ -840,7 +851,7 @@ function renderPlanned() {
         <td class="r">${f(totPlan)}</td>
         <td class="r">${f(totActual)}</td>
         <td class="r ${cls}">${(totRem < 0 ? '−' : '') + fA(totRem)}</td>
-        <td></td>
+        <td></td><td></td>
       </tr>`;
   } else {
     foot.innerHTML = '';
@@ -910,7 +921,7 @@ function patchPlannedRow(eid) {
       <td class="r">${f(totPlan)}</td>
       <td class="r">${f(totActual)}</td>
       <td class="r ${cls}">${(totRem < 0 ? '−' : '') + fA(totRem)}</td>
-      <td></td></tr>`;
+      <td></td><td></td></tr>`;
   } else { foot.innerHTML = ''; }
 }
 
@@ -947,6 +958,20 @@ async function addEntry(type) {
   else renderPlanned();
   const input = document.querySelector(`tr[data-eid="${entry.id}"] input[type=text]`);
   if (input) { input.focus(); }
+}
+
+async function entryToBacklog(eid) {
+  const entry = state.entries.find(e => e.id === eid);
+  if (!entry) return;
+  const item = await api.post('/api/backlog', {
+    category: entry.category, name: entry.name, planned: entry.planned,
+  });
+  await api.del(`/api/entries/${eid}`);
+  state.entries = state.entries.filter(e => e.id !== eid);
+  state.backlog.push(item);
+  renderPlanned();
+  renderSummary();
+  renderBacklog();
 }
 
 // ── calendar ─────────────────────────────────────────────────────────────────
