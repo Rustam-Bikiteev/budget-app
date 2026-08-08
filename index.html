@@ -66,14 +66,22 @@ header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
 }
 .nav-btn:hover { background: var(--bg); }
 #month-label { font-size: 15px; font-weight: 600; min-width: 150px; text-align: center; }
-.logout-btn {
+.header-actions { display: flex; align-items: center; gap: 6px; }
+.logout-btn, .refresh-btn {
   background: none; border: 1px solid var(--border);
   border-radius: 6px; width: 30px; height: 30px;
   cursor: pointer; font-size: 14px; color: var(--muted);
   display: flex; align-items: center; justify-content: center;
   transition: color .12s, border-color .12s;
+  flex-shrink: 0;
 }
 .logout-btn:hover { color: var(--red); border-color: var(--red); }
+.refresh-btn { font-size: 17px; }
+.refresh-btn:hover { color: var(--blue); border-color: var(--blue); }
+.refresh-btn:disabled { cursor: default; }
+.refresh-btn.spin { color: var(--blue); border-color: var(--blue); }
+.refresh-btn.spin span { animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Sync indicator ── */
 #sync-dot {
@@ -452,7 +460,9 @@ td.col-num { cursor: text; }
   .income-grid { grid-template-columns: 1fr; }
   .income-field { border-right: none; border-bottom: 1px solid var(--border); }
   .income-field:last-child { border-bottom: none; }
-  .month-label-btn { min-width: 165px; }
+  .month-label-btn { min-width: 140px; font-size: 14px; padding: 4px 8px; }
+  .month-nav { gap: 6px; }
+  header { gap: 6px; }
 
   /* table: category as colored dot, fit columns to viewport */
   table { table-layout: fixed; }
@@ -511,7 +521,10 @@ td.col-num { cursor: text; }
     </div>
     <button class="nav-btn" onclick="shiftMonth(1)">›</button>
   </div>
-  <button class="logout-btn" title="Выйти" onclick="doLogout()">⏻</button>
+  <div class="header-actions">
+    <button class="refresh-btn" id="refresh-btn" title="Обновить данные" onclick="refreshData()"><span>⟳</span></button>
+    <button class="logout-btn" title="Выйти" onclick="doLogout()">⏻</button>
+  </div>
 </header>
 
 <!-- Confirm modal -->
@@ -855,6 +868,22 @@ function shiftMonth(dir) {
 async function init() {
   state.allMonths = await api.listMonths();
   await Promise.all([loadCurrentMonth(), loadBacklog()]);
+}
+
+// Перечитывание по кнопке: дешевле полной перезагрузки страницы и не гоняет
+// заново логин. Страховка на случай, если realtime что-то не довёз.
+async function refreshData() {
+  const btn = $('refresh-btn');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.classList.add('spin');
+  try {
+    await init();
+    flash('Обновлено');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('spin');
+  }
 }
 
 // ── realtime ─────────────────────────────────────────────────────────────────
