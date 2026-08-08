@@ -819,6 +819,7 @@ async function doLogin(e) {
 }
 
 async function doLogout() {
+  await sb.removeAllChannels();
   await sb.auth.signOut();
   location.reload();
 }
@@ -827,6 +828,7 @@ function showApp() {
   $('login-overlay').classList.add('hidden');
   $('app').classList.remove('hidden');
   init();
+  subscribeRealtime();
 }
 
 function showLogin() {
@@ -855,7 +857,105 @@ async function init() {
   await Promise.all([loadCurrentMonth(), loadBacklog()]);
 }
 
-// Данные правятся с двух телефонов — при возврате на вкладку тянем свежие.
+// ── realtime ─────────────────────────────────────────────────────────────────
+// Правки прилетают с другого телефона в живом режиме. Перерисовку откладываем,
+// пока курсор стоит в поле: иначе чужое событие снесёт недописанную строку.
+
+let rtChannel = null;
+let renderQueued = false;
+
+const isEditing = () =>
+  !!document.activeElement && document.activeElement.matches('input, select');
+
+function queueRender() {
+  if (isEditing()) { renderQueued = true; return; }
+  renderQueued = false;
+  renderAll();
+  renderBacklog();
+}
+
+document.addEventListener('focusout', () => {
+  setTimeout(() => {
+    if (!renderQueued || isEditing()) return;
+    queueRender();
+  }, 150);
+});
+
+function onMonthsChange(payload) {
+  const row = payload.new && payload.new.id ? payload.new : null;
+  const oldId = payload.old && payload.old.id;
+
+  if (payload.eventType === 'DELETE') {
+    state.allMonths = state.allMonths.filter(m => m.id !== oldId);
+    if (calOpen) renderCalendar();
+    if (state.monthId === oldId) { state.monthId = null; loadCurrentMonth(); }
+    return;
+  }
+  if (!row) return;
+
+  const i = state.allMonths.findIndex(m => m.id === row.id);
+  if (i === -1) state.allMonths.push(row); else state.allMonths[i] = row;
+  if (calOpen) renderCalendar();
+
+  if (row.id === state.monthId) {
+    state.income = row.income;
+    state.saved  = row.saved;
+    const inc = $('income-inp'), sav = $('saved-inp');
+    if (document.activeElement !== inc) inc.value = row.income || '';
+    if (document.activeElement !== sav) sav.value = row.saved || '';
+    renderSummary();
+  } else if (i === -1 && state.monthId === null
+      && row.year === state.year && row.month === state.month && row.half === state.half) {
+    // период создали на другом устройстве, а мы смотрим на его пустой экран
+    loadCurrentMonth();
+  }
+}
+
+function onEntriesChange(payload) {
+  if (payload.eventType === 'DELETE') {
+    const oldId = payload.old && payload.old.id;
+    if (!state.entries.some(e => e.id === oldId)) return;
+    state.entries = state.entries.filter(e => e.id !== oldId);
+    queueRender();
+    return;
+  }
+  const row = payload.new;
+  if (!row || row.month_id !== state.monthId) return;
+  const i = state.entries.findIndex(e => e.id === row.id);
+  if (i === -1) state.entries.push(row); else state.entries[i] = row;
+  queueRender();
+}
+
+function onBacklogChange(payload) {
+  if (payload.eventType === 'DELETE') {
+    const oldId = payload.old && payload.old.id;
+    if (!state.backlog.some(b => b.id === oldId)) return;
+    state.backlog = state.backlog.filter(b => b.id !== oldId);
+  } else {
+    const row = payload.new;
+    if (!row) return;
+    const i = state.backlog.findIndex(b => b.id === row.id);
+    if (i === -1) state.backlog.push(row); else state.backlog[i] = row;
+  }
+  if (isEditing()) { renderQueued = true; return; }
+  renderBacklog();
+}
+
+function subscribeRealtime() {
+  if (rtChannel) return;
+  rtChannel = sb.channel('budget-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'months'  }, onMonthsChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'entries' }, onEntriesChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'backlog' }, onBacklogChange)
+    .subscribe(status => {
+      // Обрыв не смертелен: остаётся перечитывание при возврате на вкладку.
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        flash('Живая синхронизация отключилась', true);
+      }
+    });
+}
+
+// Realtime мог пропустить события, пока вкладка спала — по возврату досинхрон.
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible') return;
   if ($('app').classList.contains('hidden')) return;
