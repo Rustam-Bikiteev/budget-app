@@ -4,6 +4,12 @@ import psycopg2.extras
 import os
 from contextlib import contextmanager
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 app = Flask(__name__, static_folder='static')
 DATABASE_URL = os.environ['DATABASE_URL']
 
@@ -115,7 +121,7 @@ def get_month(mid):
             if not month:
                 return jsonify({'error': 'not found'}), 404
             cur.execute(
-                'SELECT * FROM entries WHERE month_id=%s ORDER BY type, category, id',
+                'SELECT * FROM entries WHERE month_id=%s ORDER BY type, category, planned DESC',
                 (mid,)
             )
             entries = cur.fetchall()
@@ -182,7 +188,7 @@ def delete_entry(eid):
 def list_backlog():
     with get_db() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute('SELECT * FROM backlog ORDER BY id')
+            cur.execute('SELECT * FROM backlog ORDER BY category, planned DESC')
             rows = cur.fetchall()
     return jsonify([dict(r) for r in rows])
 

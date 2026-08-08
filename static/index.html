@@ -601,10 +601,11 @@ td.col-num { cursor: text; }
 const MN = ['Январь','Февраль','Март','Апрель','Май','Июнь',
             'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
+const _today = new Date().getDate();
 const state = {
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1,
-  half: 1,
+  half: (_today >= 10 && _today <= 24) ? 1 : 2,
   monthId: null,
   income: 0,
   saved: 0,
