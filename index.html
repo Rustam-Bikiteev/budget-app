@@ -2,8 +2,15 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Бюджет</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#3b82f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Бюджет">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
 <style>
 :root {
   --bg: #f1f5f9;
@@ -59,6 +66,49 @@ header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
 }
 .nav-btn:hover { background: var(--bg); }
 #month-label { font-size: 15px; font-weight: 600; min-width: 150px; text-align: center; }
+.logout-btn {
+  background: none; border: 1px solid var(--border);
+  border-radius: 6px; width: 30px; height: 30px;
+  cursor: pointer; font-size: 14px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: color .12s, border-color .12s;
+}
+.logout-btn:hover { color: var(--red); border-color: var(--red); }
+
+/* ── Sync indicator ── */
+#sync-dot {
+  position: fixed; top: 62px; right: 12px; z-index: 400;
+  background: var(--text); color: #fff;
+  font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px;
+  opacity: 0; transition: opacity .2s; pointer-events: none;
+}
+#sync-dot.show { opacity: .85; }
+#sync-dot.err { background: var(--red); }
+
+/* ── Login ── */
+.login-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 900;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.login-box {
+  background: var(--surface); border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 28px 24px;
+  width: 100%; max-width: 340px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.login-box h2 { font-size: 18px; font-weight: 700; text-align: center; }
+.login-box input {
+  border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 11px 12px; font-size: 16px; font-family: inherit;
+  color: var(--text); background: var(--surface); width: 100%;
+}
+.login-box input:focus { outline: none; border-color: var(--blue); }
+.login-err { color: var(--red); font-size: 13px; text-align: center; min-height: 18px; }
 
 /* ── Main ── */
 main {
@@ -276,6 +326,7 @@ td.col-num { cursor: text; }
   transition: background .12s;
 }
 .btn-primary:hover { background: #2563eb; }
+.btn-primary:disabled { background: var(--muted); cursor: default; }
 
 .hidden { display: none !important; }
 
@@ -394,12 +445,14 @@ td.col-num { cursor: text; }
 /* ── Mobile ── */
 @media (max-width: 640px) {
   header { padding: 0 12px; }
+  header h1 { display: none; }
   main { padding: 16px 10px 40px; gap: 14px; }
   .summary { grid-template-columns: repeat(2, 1fr); }
   .s-card:last-child { grid-column: span 2; }
   .income-grid { grid-template-columns: 1fr; }
   .income-field { border-right: none; border-bottom: 1px solid var(--border); }
   .income-field:last-child { border-bottom: none; }
+  .month-label-btn { min-width: 165px; }
 
   /* table: category as colored dot, fit columns to viewport */
   table { table-layout: fixed; }
@@ -423,6 +476,21 @@ td.col-num { cursor: text; }
 </head>
 <body>
 
+<!-- Login -->
+<div id="login-overlay" class="login-overlay hidden">
+  <form class="login-box" onsubmit="doLogin(event)">
+    <h2>Бюджет</h2>
+    <input type="email" id="login-email" placeholder="Почта" autocomplete="username" required>
+    <input type="password" id="login-pass" placeholder="Пароль" autocomplete="current-password" required>
+    <p class="login-err" id="login-err"></p>
+    <button class="btn-primary" id="login-btn" type="submit">Войти</button>
+  </form>
+</div>
+
+<div id="sync-dot"></div>
+
+<div id="app" class="hidden">
+
 <header>
   <h1>Бюджет</h1>
   <div class="month-nav">
@@ -443,6 +511,7 @@ td.col-num { cursor: text; }
     </div>
     <button class="nav-btn" onclick="shiftMonth(1)">›</button>
   </div>
+  <button class="logout-btn" title="Выйти" onclick="doLogout()">⏻</button>
 </header>
 
 <!-- Confirm modal -->
@@ -597,7 +666,18 @@ td.col-num { cursor: text; }
   </div><!-- /budget-view -->
 </main>
 
+</div><!-- /app -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script>
+// ── Supabase ─────────────────────────────────────────────────────────────────
+// anon/publishable key публичен по замыслу — доступ режет RLS (см. supabase_setup.sql)
+const SUPABASE_URL = 'https://szegeqfiitlonzlpeohx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_DW_bjZP12NIX2HJA8IVy2w__lffl5yi';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true },
+});
+
 const MN = ['Январь','Февраль','Март','Апрель','Май','Июнь',
             'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
@@ -619,8 +699,8 @@ const state = {
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const $ = id => document.getElementById(id);
-const fmt = n => Number(n || 0).toLocaleString('ru-RU') + ' ₽';
-const fmtAbs = n => Math.abs(n).toLocaleString('ru-RU') + ' ₽';
+const fmt = n => Number(n || 0).toLocaleString('ru-RU') + ' ₽';
+const fmtAbs = n => Math.abs(n).toLocaleString('ru-RU') + ' ₽';
 const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 const isMobile = () => window.innerWidth <= 640;
 const fmtK = n => {
@@ -649,14 +729,111 @@ function cellKeydown(e, eid) {
   addEntry(tbody.id === 'mandatory-body' ? 'mandatory' : 'planned');
 }
 
-// ── API ──────────────────────────────────────────────────────────────────────
+// ── status indicator ─────────────────────────────────────────────────────────
+
+let syncTimer = null;
+function flash(text, isErr) {
+  const el = $('sync-dot');
+  el.textContent = text;
+  el.classList.toggle('err', !!isErr);
+  el.classList.add('show');
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => el.classList.remove('show'), isErr ? 4000 : 900);
+}
+
+// ── API (Supabase PostgREST) ─────────────────────────────────────────────────
+
+// Любая ошибка запроса должна быть видна: молча потерянная правка хуже алерта.
+function unwrap({ data, error }) {
+  if (error) { flash('Ошибка: ' + error.message, true); throw error; }
+  return data;
+}
 
 const api = {
-  get:  url       => fetch(url).then(r => r.json()),
-  post: (url, b)  => fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}).then(r => r.json()),
-  put:  (url, b)  => fetch(url, {method:'PUT',  headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}).then(r => r.json()),
-  del:  url       => fetch(url, {method:'DELETE'}).then(r => r.json()),
+  listMonths: () => sb.from('months').select('*')
+    .order('year', { ascending: false })
+    .order('month', { ascending: false })
+    .order('half', { ascending: false })
+    .then(unwrap),
+
+  getMonth: async id => {
+    const month = unwrap(await sb.from('months').select('*').eq('id', id).single());
+    const entries = unwrap(await sb.from('entries').select('*').eq('month_id', id)
+      .order('type').order('category').order('planned', { ascending: false }));
+    return { month, entries };
+  },
+
+  createMonth: async (year, month, half, copyFromId) => {
+    const res = await sb.from('months')
+      .insert({ year, month, half, income: 0, saved: 0 }).select().single();
+    if (res.error) {
+      if (res.error.code === '23505') return { error: 'exists' };
+      flash('Ошибка: ' + res.error.message, true);
+      throw res.error;
+    }
+    const created = res.data;
+    if (copyFromId) {
+      const src = unwrap(await sb.from('entries')
+        .select('type,category,name,planned').eq('month_id', copyFromId));
+      if (src.length) {
+        unwrap(await sb.from('entries').insert(
+          src.map(e => ({ ...e, month_id: created.id, actual: 0 }))
+        ));
+      }
+    }
+    return created;
+  },
+
+  updateMonth: (id, patch) => sb.from('months').update(patch).eq('id', id).then(unwrap),
+
+  createEntry: row => sb.from('entries').insert(row).select().single().then(unwrap),
+  updateEntry: (id, patch) => sb.from('entries').update(patch).eq('id', id).then(unwrap),
+  deleteEntry: id => sb.from('entries').delete().eq('id', id).then(unwrap),
+
+  listBacklog: () => sb.from('backlog').select('*')
+    .order('category').order('planned', { ascending: false }).then(unwrap),
+  createBacklog: row => sb.from('backlog').insert(row).select().single().then(unwrap),
+  updateBacklog: (id, patch) => sb.from('backlog').update(patch).eq('id', id).then(unwrap),
+  deleteBacklog: id => sb.from('backlog').delete().eq('id', id).then(unwrap),
 };
+
+// ── auth ─────────────────────────────────────────────────────────────────────
+
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = $('login-btn');
+  btn.disabled = true;
+  $('login-err').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({
+    email: $('login-email').value.trim(),
+    password: $('login-pass').value,
+  });
+  btn.disabled = false;
+  if (error) {
+    $('login-err').textContent = error.message === 'Invalid login credentials'
+      ? 'Неверная почта или пароль' : error.message;
+    return;
+  }
+  $('login-pass').value = '';
+  showApp();
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+function showApp() {
+  $('login-overlay').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  init();
+}
+
+function showLogin() {
+  $('app').classList.add('hidden');
+  $('login-overlay').classList.remove('hidden');
+  $('login-email').focus();
+}
 
 // ── navigation ───────────────────────────────────────────────────────────────
 
@@ -674,9 +851,17 @@ function shiftMonth(dir) {
 // ── init / load ───────────────────────────────────────────────────────────────
 
 async function init() {
-  state.allMonths = await api.get('/api/months');
+  state.allMonths = await api.listMonths();
   await Promise.all([loadCurrentMonth(), loadBacklog()]);
 }
+
+// Данные правятся с двух телефонов — при возврате на вкладку тянем свежие.
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  if ($('app').classList.contains('hidden')) return;
+  if (document.activeElement && document.activeElement.matches('input, select')) return;
+  await init();
+});
 
 async function loadCurrentMonth() {
   const { year, month, half } = state;
@@ -693,13 +878,14 @@ async function loadCurrentMonth() {
     $('empty-state').classList.remove('hidden');
     $('budget-view').classList.add('hidden');
     state.monthId = null; state.entries = [];
+    renderBacklog();
     return;
   }
 
   $('empty-state').classList.add('hidden');
   $('budget-view').classList.remove('hidden');
 
-  const data = await api.get(`/api/months/${found.id}`);
+  const data = await api.getMonth(found.id);
   state.monthId = found.id;
   state.income  = data.month.income;
   state.saved   = data.month.saved;
@@ -709,6 +895,7 @@ async function loadCurrentMonth() {
   $('saved-inp').value  = state.saved  || '';
 
   renderAll();
+  renderBacklog();
 }
 
 function findPrev(year, month, half) {
@@ -721,7 +908,7 @@ function findPrev(year, month, half) {
 
 async function createCurrentMonth() {
   const copyId = $('copy-cb').checked ? state.prevMonthId : null;
-  const res = await api.post('/api/months', { year: state.year, month: state.month, half: state.half, copy_from_id: copyId });
+  const res = await api.createMonth(state.year, state.month, state.half, copyId);
   if (res.error) { alert('Ошибка: ' + res.error); return; }
   state.allMonths.push(res);
   loadCurrentMonth();
@@ -734,7 +921,8 @@ async function saveMonthFields() {
   const income = parseFloat($('income-inp').value) || 0;
   const saved  = parseFloat($('saved-inp').value)  || 0;
   state.income = income; state.saved = saved;
-  await api.put(`/api/months/${state.monthId}`, { income, saved });
+  await api.updateMonth(state.monthId, { income, saved });
+  flash('Сохранено');
   renderSummary();
 }
 
@@ -880,7 +1068,7 @@ function getRowValues(eid) {
 async function saveEntry(eid) {
   const d = getRowValues(eid);
   if (!d) return;
-  await api.put(`/api/entries/${eid}`, {
+  await api.updateEntry(eid, {
     category: d.category, name: d.name,
     planned: d.planned || 0, actual: d.actual || 0,
   });
@@ -933,7 +1121,10 @@ async function onCatChange(eid, sel) {
   sel.className = `cat-sel ${catClass(sel.value)}`;
   const tr = sel.closest('tr');
   if (tr) tr.className = catClass(sel.value);
-  await api.put(`/api/entries/${eid}`, d);
+  await api.updateEntry(eid, {
+    category: d.category, name: d.name,
+    planned: d.planned || 0, actual: d.actual || 0,
+  });
   const idx = state.entries.findIndex(e => e.id === eid);
   if (idx !== -1) state.entries[idx].category = d.category;
   if (d.type === 'planned' && state.catFilter !== 'all') renderPlanned();
@@ -942,7 +1133,7 @@ async function onCatChange(eid, sel) {
 function deleteEntry(eid) {
   const entry = state.entries.find(e => e.id === eid);
   openConfirm(entry?.name, async () => {
-    await api.del(`/api/entries/${eid}`);
+    await api.deleteEntry(eid);
     state.entries = state.entries.filter(e => e.id !== eid);
     renderAll();
   });
@@ -951,7 +1142,7 @@ function deleteEntry(eid) {
 async function addEntry(type) {
   if (!state.monthId) return;
   const cat = (state.catFilter !== 'all' && type === 'planned') ? state.catFilter : 'shared';
-  const entry = await api.post('/api/entries', {
+  const entry = await api.createEntry({
     month_id: state.monthId, type, category: cat, name: '', planned: 0, actual: 0,
   });
   state.entries.push(entry);
@@ -964,10 +1155,10 @@ async function addEntry(type) {
 async function entryToBacklog(eid) {
   const entry = state.entries.find(e => e.id === eid);
   if (!entry) return;
-  const item = await api.post('/api/backlog', {
+  const item = await api.createBacklog({
     category: entry.category, name: entry.name, planned: entry.planned,
   });
-  await api.del(`/api/entries/${eid}`);
+  await api.deleteEntry(eid);
   state.entries = state.entries.filter(e => e.id !== eid);
   state.backlog.push(item);
   renderPlanned();
@@ -1063,7 +1254,7 @@ function toggleBacklog() {
 }
 
 async function loadBacklog() {
-  state.backlog = await api.get('/api/backlog');
+  state.backlog = await api.listBacklog();
   renderBacklog();
 }
 
@@ -1105,7 +1296,7 @@ async function onBacklogCatChange(bid, sel) {
   sel.className = `cat-sel ${catClass(sel.value)}`;
   const tr = sel.closest('tr');
   if (tr) tr.className = catClass(sel.value);
-  await api.put(`/api/backlog/${bid}`, { category: item.category, name: item.name, planned: item.planned });
+  await api.updateBacklog(bid, { category: item.category, name: item.name, planned: item.planned });
 }
 
 function getBacklogRowValues(bid) {
@@ -1126,7 +1317,7 @@ function getBacklogRowValues(bid) {
 async function saveBacklogEntry(bid) {
   const d = getBacklogRowValues(bid);
   if (!d) return;
-  await api.put(`/api/backlog/${bid}`, { category: d.category, name: d.name, planned: d.planned });
+  await api.updateBacklog(bid, { category: d.category, name: d.name, planned: d.planned });
   const idx = state.backlog.findIndex(b => b.id === bid);
   if (idx !== -1) state.backlog[idx] = { ...state.backlog[idx], ...d };
   $('backlog-total').textContent = state.backlog.length
@@ -1134,7 +1325,7 @@ async function saveBacklogEntry(bid) {
 }
 
 async function addBacklogEntry() {
-  const item = await api.post('/api/backlog', { category: 'shared', name: '', planned: 0 });
+  const item = await api.createBacklog({ category: 'shared', name: '', planned: 0 });
   state.backlog.push(item);
   if (!backlogOpen) toggleBacklog();
   renderBacklog();
@@ -1145,7 +1336,7 @@ async function addBacklogEntry() {
 function deleteBacklogEntry(bid) {
   const item = state.backlog.find(b => b.id === bid);
   openConfirm(item?.name, async () => {
-    await api.del(`/api/backlog/${bid}`);
+    await api.deleteBacklog(bid);
     state.backlog = state.backlog.filter(b => b.id !== bid);
     renderBacklog();
   });
@@ -1153,17 +1344,26 @@ function deleteBacklogEntry(bid) {
 
 async function moveBacklogEntry(bid) {
   if (!state.monthId) return;
-  const res = await api.post(`/api/backlog/${bid}/move`, { month_id: state.monthId });
-  if (res.error) { alert('Ошибка: ' + res.error); return; }
+  const item = state.backlog.find(b => b.id === bid);
+  if (!item) return;
+  const entry = await api.createEntry({
+    month_id: state.monthId, type: 'planned',
+    category: item.category, name: item.name, planned: item.planned, actual: 0,
+  });
+  await api.deleteBacklog(bid);
   state.backlog = state.backlog.filter(b => b.id !== bid);
-  state.entries.push(res.entry);
+  state.entries.push(entry);
   renderBacklog();
   renderPlanned();
   renderSummary();
 }
 
 // ── start ─────────────────────────────────────────────────────────────────────
-init();
+
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) showApp(); else showLogin();
+})();
 </script>
 </body>
 </html>
