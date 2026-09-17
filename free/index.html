@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Бюджет</title>
+<meta name="description" content="Бюджет по полумесяцам. Бесплатно, без регистрации, данные хранятся только на вашем устройстве.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#3b82f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Бюджет">
+<link rel="apple-touch-icon" href="../icon-192.png">
+<link rel="icon" href="../icon-192.png">
+<style>
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #94a3b8;
+  --blue: #3b82f6;
+  --blue-light: #eff6ff;
+  --green: #10b981;
+  --green-light: #f0fdf4;
+  --amber: #f59e0b;
+  --amber-light: #fffbeb;
+  --red: #ef4444;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow);
+}
+header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+.month-nav { display: flex; align-items: center; gap: 10px; }
+.nav-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 30px; height: 30px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s;
+  line-height: 1;
+}
+.nav-btn:hover { background: var(--bg); }
+.header-actions { display: flex; align-items: center; gap: 6px; }
+.icon-btn {
+  background: none; border: 1px solid var(--border);
+  border-radius: 6px; width: 30px; height: 30px;
+  cursor: pointer; font-size: 16px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: color .12s, border-color .12s;
+  flex-shrink: 0; position: relative;
+}
+.icon-btn:hover { color: var(--blue); border-color: var(--blue); }
+.icon-btn .badge {
+  position: absolute; top: -3px; right: -3px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--amber); border: 2px solid var(--surface);
+}
+
+/* ── Sync indicator ── */
+#sync-dot {
+  position: fixed; top: 62px; right: 12px; z-index: 600;
+  background: var(--text); color: #fff;
+  font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px;
+  opacity: 0; transition: opacity .2s; pointer-events: none;
+  max-width: calc(100vw - 24px);
+}
+#sync-dot.show { opacity: .85; }
+#sync-dot.err { background: var(--red); }
+
+/* ── Main ── */
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+#budget-view { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Banner ── */
+.banner {
+  background: var(--amber-light);
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.banner.info { background: var(--blue-light); border-color: #bfdbfe; }
+.banner-text { flex: 1 1 240px; line-height: 1.45; }
+.banner-text b { display: block; margin-bottom: 2px; }
+.banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Empty state ── */
+.empty-state {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 56px 24px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.empty-state h2 { font-size: 20px; font-weight: 700; }
+.empty-state p { color: var(--muted); }
+.copy-option {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; cursor: pointer; color: var(--text);
+}
+.copy-option input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue); }
+
+/* ── Summary cards ── */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.s-card {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.s-card-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.s-card-val {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -.5px;
+}
+.s-card.accent { background: var(--blue); }
+.s-card.accent .s-card-label { color: rgba(255,255,255,.65); }
+.s-card.accent .s-card-val  { color: #fff; }
+.s-card.accent.red-accent { background: var(--red); }
+
+/* ── Section ── */
+.section {
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.section-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.section-header h2 { font-size: 14px; font-weight: 700; }
+.section-total { font-size: 13px; font-weight: 700; color: var(--muted); }
+
+/* ── Income fields ── */
+.income-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.income-field {
+  padding: 16px 20px;
+  border-right: 1px solid var(--border);
+}
+.income-field:last-child { border-right: none; }
+.income-field label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.income-field input {
+  font-size: 24px;
+  font-weight: 800;
+  border: none; outline: none;
+  width: 100%;
+  color: var(--text);
+  background: transparent;
+  letter-spacing: -.5px;
+}
+.income-field input::placeholder { color: var(--muted); font-weight: 400; font-size: 20px; }
+.income-field input:focus { color: var(--blue); }
+
+/* ── Table ── */
+table { width: 100%; border-collapse: collapse; }
+thead tr { background: #f8fafc; }
+th {
+  padding: 8px 12px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+th.r { text-align: right; }
+td { border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #fafafa; }
+
+.col-name { width: auto; }
+.col-cat  { width: 110px; }
+.col-num  { width: 110px; }
+.col-del  { width: 38px; }
+
+/* cell inputs */
+.ci {
+  border: none; background: transparent;
+  font-size: 14px; font-family: inherit; color: var(--text);
+  padding: 13px 12px; width: 100%; display: block;
+}
+.ci:focus { outline: none; color: var(--blue); }
+.ci.r { text-align: right; }
+td.col-num { cursor: text; }
+.ci[type=number] { -moz-appearance: textfield; }
+.ci[type=number]::-webkit-inner-spin-button,
+.ci[type=number]::-webkit-outer-spin-button { display: none; }
+
+/* category select: цвет категории приходит через --cat */
+.cat-sel {
+  border: none; background: transparent;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  cursor: pointer; padding: 9px 8px; width: 100%;
+  -webkit-appearance: none; appearance: none;
+  color: var(--cat, var(--muted));
+  text-overflow: ellipsis;
+}
+.cat-sel:focus { outline: none; }
+.cat-sel option { color: var(--text); }
+
+/* remaining */
+.rem-cell { padding: 9px 12px; text-align: right; font-weight: 700; font-size: 13px; display: block; }
+.rem-pos  { color: var(--green); }
+.rem-neg  { color: var(--red); }
+.rem-zero { color: var(--muted); }
+
+/* delete btn */
+.del-btn {
+  display: block; margin: 0 auto;
+  background: none; border: none;
+  cursor: pointer; color: var(--muted);
+  font-size: 18px; width: 30px; height: 30px;
+  border-radius: 4px; line-height: 30px; text-align: center;
+  transition: color .12s, background .12s;
+}
+.del-btn:hover { color: var(--red); background: #fee2e2; }
+.del-btn:disabled { opacity: .3; cursor: default; }
+.del-btn:disabled:hover { color: var(--muted); background: none; }
+
+/* totals row */
+.totals-row td {
+  padding: 9px 12px; font-weight: 700; font-size: 13px;
+  background: #f8fafc; border-top: 2px solid var(--border);
+}
+.totals-row td.r { text-align: right; }
+
+/* add row */
+.add-row { padding: 10px 16px; border-top: 1px solid var(--border); }
+.add-btn {
+  width: 100%; padding: 7px 12px;
+  background: none; border: 1.5px dashed var(--border);
+  border-radius: 8px; cursor: pointer;
+  color: var(--muted); font-size: 13px; font-family: inherit;
+  transition: all .12s;
+}
+.add-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
+/* category filter tabs */
+.cat-tabs {
+  display: flex; gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.cat-tab {
+  padding: 4px 14px;
+  border-radius: 20px; font-size: 12px; font-weight: 700;
+  cursor: pointer; border: 1.5px solid var(--border);
+  background: none; color: var(--muted);
+  font-family: inherit; transition: all .12s;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cat-tab.active { background: var(--cat); border-color: var(--cat); color: #fff; }
+
+/* buttons */
+.btn-primary, .btn-secondary {
+  border-radius: 8px;
+  padding: 10px 20px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: background .12s, border-color .12s;
+}
+.btn-primary { background: var(--blue); color: #fff; border: none; }
+.btn-primary:hover { background: #2563eb; }
+.btn-primary:disabled { background: var(--muted); cursor: default; }
+.btn-secondary { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+.btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+.btn-link {
+  background: none; border: none; padding: 0;
+  color: var(--blue); font: inherit; font-size: 13px;
+  cursor: pointer; text-decoration: underline; text-align: left;
+}
+
+.hidden { display: none !important; }
+
+/* ── Calendar popup ── */
+.cal-wrapper { position: relative; }
+.month-label-btn {
+  font-size: 15px; font-weight: 600; min-width: 190px;
+  background: none; border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 12px; cursor: pointer;
+  color: var(--text); font-family: inherit;
+  transition: background .12s;
+  display: flex; align-items: center; gap: 6px; justify-content: center;
+}
+.month-label-btn:hover { background: var(--bg); }
+.cal-drop-arrow { font-size: 10px; color: var(--muted); }
+.cal-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.13);
+  padding: 12px; z-index: 200; min-width: 300px;
+}
+.cal-year-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.cal-year-nav span { font-weight: 700; font-size: 15px; }
+.cal-year-btn {
+  background: none; border: 1px solid var(--border);
+  border-radius: 6px; width: 28px; height: 28px;
+  cursor: pointer; font-size: 15px; color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s;
+}
+.cal-year-btn:hover { background: var(--bg); }
+.cal-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.cal-month { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; text-align: center; }
+.cal-month-name {
+  font-size: 11px; font-weight: 700; padding: 4px 2px 2px;
+  color: var(--muted); background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+}
+.cal-halves { display: flex; }
+.cal-half {
+  flex: 1; padding: 5px 2px; font-size: 12px; font-weight: 700;
+  background: none; border: none; cursor: pointer;
+  color: var(--text); font-family: inherit;
+  transition: background .12s, color .12s;
+}
+.cal-half:first-child { border-right: 1px solid var(--border); }
+.cal-half:hover { background: var(--blue-light); color: var(--blue); }
+.cal-half.has-data { color: var(--blue); }
+.cal-half.is-current { background: var(--blue); color: #fff !important; }
+.cal-half.is-current:hover { background: #2563eb; }
+
+/* ── Modals ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+#settings-overlay { z-index: 450; }
+#confirm-overlay  { z-index: 500; }
+.confirm-box {
+  background: var(--surface); border-radius: 14px;
+  padding: 24px 28px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  width: 100%; max-width: 380px; text-align: center;
+}
+.confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.confirm-name { color: var(--muted); font-size: 13px; margin-bottom: 20px; min-height: 18px; line-height: 1.45; }
+.confirm-btns { display: flex; gap: 10px; justify-content: center; }
+.confirm-cancel {
+  padding: 9px 22px; border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: none; cursor: pointer; font-size: 14px; font-family: inherit;
+  font-weight: 600; color: var(--text); transition: background .12s;
+}
+.confirm-cancel:hover { background: var(--bg); }
+.confirm-ok {
+  padding: 9px 22px; border-radius: 8px; border: none;
+  background: var(--red); color: #fff; cursor: pointer;
+  font-size: 14px; font-family: inherit; font-weight: 700;
+  transition: background .12s;
+}
+.confirm-ok:hover { background: #dc2626; }
+
+.settings-box {
+  background: var(--surface); border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  width: 100%; max-width: 480px;
+  max-height: calc(100vh - 32px); overflow-y: auto;
+}
+.settings-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--surface); z-index: 1;
+}
+.settings-head h2 { font-size: 16px; font-weight: 700; }
+.settings-sec { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.settings-sec:last-child { border-bottom: none; }
+.settings-sec h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+.hint { color: #475569; font-size: 13px; line-height: 1.5; }
+.hint b { color: var(--text); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.cat-row { display: flex; align-items: center; gap: 8px; }
+.cat-name {
+  flex: 1; min-width: 0;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 7px 10px; font-size: 14px; font-family: inherit; font-weight: 700;
+  color: var(--cat); background: var(--surface);
+}
+.cat-name:focus { outline: none; border-color: var(--cat); }
+.swatches { display: flex; gap: 4px; flex-wrap: wrap; max-width: 150px; }
+.swatch {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  box-shadow: inset 0 0 0 2px var(--surface);
+}
+.swatch.on { border-color: var(--text); }
+
+/* ── Backlog section ── */
+.backlog-header { cursor: pointer; user-select: none; }
+.backlog-header:hover { background: #fafafa; }
+.backlog-arrow { font-size: 11px; color: var(--muted); margin-right: 6px; }
+.col-move { width: 38px; }
+.move-btn {
+  display: block; margin: 0 auto;
+  background: none; border: none; cursor: pointer;
+  color: var(--green); font-size: 20px; font-weight: 700;
+  width: 30px; height: 30px;
+  border-radius: 4px; line-height: 30px; text-align: center;
+  transition: color .12s, background .12s;
+}
+.move-btn:hover { background: var(--green-light); }
+.move-btn:disabled { color: var(--muted); cursor: default; }
+.move-btn:disabled:hover { background: none; }
+.tobacklog-btn {
+  display: block; margin: 0 auto;
+  background: none; border: none; cursor: pointer;
+  color: var(--amber); font-size: 16px; font-weight: 700;
+  width: 30px; height: 30px;
+  border-radius: 4px; line-height: 30px; text-align: center;
+  transition: color .12s, background .12s;
+}
+.tobacklog-btn:hover { background: var(--amber-light); color: #d97706; }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  header { padding: 0 12px; gap: 6px; }
+  header h1 { display: none; }
+  main, #budget-view { gap: 14px; }
+  main { padding: 16px 10px 40px; }
+  .summary { grid-template-columns: repeat(2, 1fr); }
+  .s-card:last-child { grid-column: span 2; }
+  .income-grid { grid-template-columns: 1fr; }
+  .income-field { border-right: none; border-bottom: 1px solid var(--border); }
+  .income-field:last-child { border-bottom: none; }
+  .month-label-btn { min-width: 140px; font-size: 14px; padding: 4px 8px; }
+  .month-nav { gap: 6px; }
+
+  /* table: category as colored dot, fit columns to viewport */
+  table { table-layout: fixed; }
+  th.col-cat { font-size: 0; padding: 0; width: 40px; }
+  th.col-name { font-size: 0; }
+  td.col-cat { width: 40px; padding: 0; text-align: center; }
+  .cat-sel { width: 22px; height: 22px; border-radius: 50%; padding: 0; font-size: 0; border: none; cursor: pointer; display: inline-block; background: var(--cat, var(--muted)); }
+  .col-num { width: 56px; }
+  .col-del { width: 40px; }
+  th { padding: 7px 4px; }
+  td { padding: 0; }
+  td.col-del { padding: 0; position: relative; }
+  .del-btn { position: absolute; inset: 0; margin: 0; width: 100%; height: 100%; border-radius: 0; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+  .settings-sec .del-btn { position: static; width: 30px; height: 30px; }
+  .ci { padding: 11px 4px; font-size: 13px; }
+  .rem-cell { padding: 8px 4px; font-size: 12px; }
+  .cat-row { flex-wrap: wrap; }
+  .swatches { max-width: none; order: 3; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div id="sync-dot"></div>
+
+<header>
+  <h1>Бюджет</h1>
+  <div class="month-nav">
+    <button class="nav-btn" onclick="shiftMonth(-1)" aria-label="Предыдущий период">‹</button>
+    <div class="cal-wrapper">
+      <button id="month-label" class="month-label-btn" onclick="toggleCalendar(event)">
+        <span id="month-label-text"></span>
+        <span class="cal-drop-arrow">▾</span>
+      </button>
+      <div id="cal-popup" class="cal-popup hidden">
+        <div class="cal-year-nav">
+          <button class="cal-year-btn" onclick="calPickYear(-1)">‹</button>
+          <span id="cal-year-display"></span>
+          <button class="cal-year-btn" onclick="calPickYear(1)">›</button>
+        </div>
+        <div id="cal-months-grid" class="cal-months"></div>
+      </div>
+    </div>
+    <button class="nav-btn" onclick="shiftMonth(1)" aria-label="Следующий период">›</button>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" title="Настройки и резервная копия" aria-label="Настройки" onclick="openSettings()">
+      ⚙<span class="badge hidden" id="settings-badge"></span>
+    </button>
+  </div>
+</header>
+
+<!-- Confirm modal -->
+<div id="confirm-overlay" class="modal-overlay hidden">
+  <div class="confirm-box">
+    <p class="confirm-title" id="confirm-title"></p>
+    <p class="confirm-name" id="confirm-name"></p>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">Отмена</button>
+      <button class="confirm-ok" id="confirm-ok" onclick="execConfirm()"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div id="settings-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeSettings()">
+  <div class="settings-box">
+    <div class="settings-head">
+      <h2>Настройки</h2>
+      <button class="icon-btn" aria-label="Закрыть" onclick="closeSettings()">×</button>
+    </div>
+
+    <section class="settings-sec">
+      <h3>Резервная копия</h3>
+      <p class="hint" id="backup-status"></p>
+      <div class="btn-row">
+        <button class="btn-primary btn-sm" onclick="exportBackup()">Сохранить копию</button>
+        <button class="btn-secondary btn-sm" onclick="pickImportFile()">Восстановить из файла</button>
+      </div>
+      <div id="autosave-block" class="hidden">
+        <p class="hint" id="autosave-status"></p>
+        <div class="btn-row" id="autosave-actions" style="margin-top:8px"></div>
+      </div>
+      <button id="undo-import-btn" class="btn-link hidden" onclick="undoImport()">
+        Вернуть данные, какими они были до последнего восстановления
+      </button>
+    </section>
+
+    <section class="settings-sec">
+      <h3>Категории</h3>
+      <div id="cat-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="add-btn" onclick="addCat()">+ Добавить категорию</button>
+    </section>
+
+    <section class="settings-sec">
+      <h3>Где хранятся данные</h3>
+      <p class="hint" id="storage-status"></p>
+    </section>
+  </div>
+</div>
+
+<input type="file" id="import-file" accept="application/json,.json" class="hidden" onchange="onImportFile(this)">
+
+<main>
+
+  <div id="banner" class="banner hidden"></div>
+
+  <!-- Empty state -->
+  <div id="empty-state" class="empty-state hidden">
+    <h2 id="empty-title"></h2>
+    <p>Данных пока нет — создай бюджет для этого периода</p>
+    <label class="copy-option" id="copy-option" style="display:none">
+      <input type="checkbox" id="copy-cb"> Скопировать план из предыдущего периода
+    </label>
+    <button class="btn-primary" onclick="createCurrentMonth()">Создать бюджет</button>
+  </div>
+
+  <!-- Budget view -->
+  <div id="budget-view" class="hidden">
+
+    <!-- Summary -->
+    <div class="summary">
+      <div class="s-card">
+        <div class="s-card-label">Получено</div>
+        <div class="s-card-val" id="s-income">0 ₽</div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-label">Обязательные</div>
+        <div class="s-card-val" id="s-mandatory">0 ₽</div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-label">Потрачено</div>
+        <div class="s-card-val" id="s-spent">0 ₽</div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-label">Отложено</div>
+        <div class="s-card-val" id="s-saved">0 ₽</div>
+      </div>
+      <div class="s-card accent" id="s-remain-card">
+        <div class="s-card-label">Остаток</div>
+        <div class="s-card-val" id="s-remain">0 ₽</div>
+      </div>
+    </div>
+
+    <!-- Income & Savings -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Доходы и накопления</h2>
+      </div>
+      <div class="income-grid">
+        <div class="income-field">
+          <label for="income-inp">Получено за период</label>
+          <input type="number" inputmode="decimal" id="income-inp" placeholder="0 ₽"
+            onblur="saveMonthFields()" onkeydown="enterBlur(event)">
+        </div>
+        <div class="income-field">
+          <label for="saved-inp">Отложено за период</label>
+          <input type="number" inputmode="decimal" id="saved-inp" placeholder="0 ₽"
+            onblur="saveMonthFields()" onkeydown="enterBlur(event)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Mandatory -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Обязательные платежи</h2>
+        <span class="section-total" id="mandatory-total"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-cat">Категория</th>
+            <th class="col-name">Название</th>
+            <th class="r col-num">Сумма</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="mandatory-body"></tbody>
+      </table>
+      <div class="add-row">
+        <button class="add-btn" onclick="addEntry('mandatory')">+ Добавить платёж</button>
+      </div>
+    </div>
+
+    <!-- Backlog -->
+    <div class="section">
+      <div class="section-header backlog-header" onclick="toggleBacklog()">
+        <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Бэклог</h2>
+        <span class="section-total" id="backlog-total"></span>
+      </div>
+      <div id="backlog-content" class="hidden">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-cat">Категория</th>
+              <th class="col-name">Название</th>
+              <th class="r col-num">Сумма</th>
+              <th class="col-move"></th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="backlog-body"></tbody>
+        </table>
+        <div class="add-row">
+          <button class="add-btn" onclick="addBacklogEntry()">+ Добавить в бэклог</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Planned -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Планируемые траты</h2>
+        <span class="section-total" id="planned-total"></span>
+      </div>
+      <div class="cat-tabs" id="cat-tabs"></div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-cat">Категория</th>
+            <th class="col-name">Название</th>
+            <th class="r col-num">План</th>
+            <th class="r col-num">Факт</th>
+            <th class="r col-num">Осталось</th>
+            <th class="col-move"></th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="planned-body"></tbody>
+        <tfoot id="planned-foot"></tfoot>
+      </table>
+      <div class="add-row">
+        <button class="add-btn" onclick="addEntry('planned')">+ Добавить трату</button>
+      </div>
+    </div>
+
+  </div><!-- /budget-view -->
+</main>
+
+<script>
+// Local-first версия: сервера нет, всё лежит в IndexedDB этого браузера.
+// Защита от потери — резервные копии (файл JSON, автосохранение в файл).
+
+const MN = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+            'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+const COLORS = ['#3b82f6', '#10b981', '#ec4899', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#64748b'];
+const DEFAULT_CATS = [
+  { id: 'me',     name: 'Я',     color: '#3b82f6' },
+  { id: 'shared', name: 'Общие', color: '#10b981' },
+];
+const BACKUP_FORMAT = 1;
+const DAY = 24 * 60 * 60 * 1000;
+const STALE_BACKUP_MS = 3 * DAY;
+
+const _today = new Date().getDate();
+const state = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth() + 1,
+  half: (_today >= 10 && _today <= 24) ? 1 : 2,
+  monthId: null,
+  income: 0,
+  saved: 0,
+  entries: [],
+  allMonths: [],
+  catFilter: 'all',
+  prevMonthId: null,
+  backlog: [],
+};
+
+let cats = DEFAULT_CATS;
+const meta = { lastBackupAt: 0, lastChangeAt: 0, hasPreImport: false };
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n || 0).toLocaleString('ru-RU') + ' ₽';
+const fmtAbs = n => Math.abs(n).toLocaleString('ru-RU') + ' ₽';
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const isMobile = () => window.innerWidth <= 640;
+const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+const fmtK = n => {
+  const abs = Math.abs(n || 0);
+  const sign = n < 0 ? '−' : '';
+  if (abs >= 1000) {
+    const k = abs / 1000;
+    const s = Number.isInteger(k) ? String(k) : k.toFixed(1).replace(/\.0$/, '');
+    return sign + s + 'К ₽';
+  }
+  return sign + abs + ' ₽';
+};
+const fmtDate = ts => new Date(ts).toLocaleString('ru-RU', {
+  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+});
+const daysAgo = ts => Math.floor((Date.now() - ts) / DAY);
+
+// id попадают в onclick-атрибуты, поэтому только безопасные символы
+const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const uid = () => {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  return [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+};
+
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const fsSupported = 'showSaveFilePicker' in window;
+
+function enterBlur(e) { if (e.key === 'Enter') e.target.blur(); }
+
+function cellKeydown(e) {
+  if (e.key === 'Enter') { e.target.blur(); return; }
+  if (e.key !== 'Tab' || e.shiftKey) return;
+  const tbody = e.target.closest('tbody');
+  if (!tbody) return;
+  const lastRow = [...tbody.querySelectorAll('tr[data-eid]')].at(-1);
+  if (!lastRow || e.target.closest('tr') !== lastRow) return;
+  const focusables = [...lastRow.querySelectorAll('input, select')];
+  if (focusables.at(-1) !== e.target) return;
+  e.preventDefault();
+  addEntry(tbody.id === 'mandatory-body' ? 'mandatory' : 'planned');
+}
+
+// ── status indicator ─────────────────────────────────────────────────────────
+
+let syncTimer = null;
+function flash(text, isErr) {
+  const el = $('sync-dot');
+  el.textContent = text;
+  el.classList.toggle('err', !!isErr);
+  el.classList.add('show');
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => el.classList.remove('show'), isErr ? 5000 : 900);
+}
+
+// ── IndexedDB ────────────────────────────────────────────────────────────────
+// Каждая операция из нескольких шагов (перенос в бэклог, копирование плана,
+// восстановление копии) идёт одной транзакцией: либо всё, либо ничего.
+
+const DB_NAME = 'budget-free';
+const DB_VERSION = 1;
+let dbPromise = null;
+
+function openDB() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      const months = db.createObjectStore('months', { keyPath: 'id' });
+      months.createIndex('period', ['year', 'month', 'half'], { unique: true });
+      const entries = db.createObjectStore('entries', { keyPath: 'id' });
+      entries.createIndex('month_id', 'month_id');
+      db.createObjectStore('backlog', { keyPath: 'id' });
+      db.createObjectStore('meta', { keyPath: 'key' });
+    };
+    req.onsuccess = () => {
+      const db = req.result;
+      // новая версия приложения в другой вкладке обновляет схему
+      db.onversionchange = () => { db.close(); location.reload(); };
+      resolve(db);
+    };
+    req.onerror = () => { dbPromise = null; reject(req.error); };
+    req.onblocked = () => flash('Закрой другие вкладки с бюджетом', true);
+  });
+  return dbPromise;
+}
+
+// fn(stores, out, t): результат кладётся в out.value, промис резолвится
+// только после commit транзакции.
+async function tx(storeNames, mode, fn) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const names = [].concat(storeNames);
+    const t = db.transaction(names, mode);
+    const s = {};
+    names.forEach(n => { s[n] = t.objectStore(n); });
+    const out = {};
+    t.oncomplete = () => resolve(out.value);
+    t.onabort = () => reject(out.error || t.error || new Error('Операция отменена'));
+    try { fn(s, out, t); } catch (e) { out.error = e; t.abort(); }
+  });
+}
+
+function onReq(r, cb) { r.onsuccess = () => cb(r.result); }
+
+function fail(out, t, msg) { out.error = new Error(msg); t.abort(); }
+
+// Любая ошибка записи должна быть видна: молча потерянная правка хуже алерта.
+async function write(storeNames, fn) {
+  try {
+    const v = await tx(storeNames, 'readwrite', fn);
+    onDataChanged();
+    return v;
+  } catch (e) {
+    flash('Не сохранилось: ' + (e && e.message || e), true);
+    throw e;
+  }
+}
+
+const getMeta = key => tx('meta', 'readonly', (s, out) =>
+  onReq(s.meta.get(key), r => { out.value = r ? r.value : undefined; }));
+const setMeta = (key, value) => tx('meta', 'readwrite', s => { s.meta.put({ key, value }); });
+const delMeta = key => tx('meta', 'readwrite', s => { s.meta.delete(key); });
+
+function patchRow(store, id, patch) {
+  onReq(store.get(id), row => {
+    if (row) store.put({ ...row, ...patch, updated_at: Date.now() });
+  });
+}
+
+const catIndex = id => { const i = cats.findIndex(c => c.id === id); return i === -1 ? 999 : i; };
+const sortRows = rows => rows.sort((a, b) =>
+  (a.type || '').localeCompare(b.type || '')
+  || catIndex(a.category) - catIndex(b.category)
+  || (a.created_at || 0) - (b.created_at || 0));
+
+const api = {
+  listMonths: () => tx('months', 'readonly', (s, out) =>
+    onReq(s.months.getAll(), v => { out.value = v; })),
+
+  getMonth: id => tx(['months', 'entries'], 'readonly', (s, out) => {
+    out.value = {};
+    onReq(s.months.get(id), v => { out.value.month = v; });
+    onReq(s.entries.index('month_id').getAll(id), v => { out.value.entries = sortRows(v); });
+  }),
+
+  createMonth: async (year, month, half, copyFromId) => {
+    try {
+      const created = await tx(['months', 'entries'], 'readwrite', (s, out) => {
+        const now = Date.now();
+        const m = { id: uid(), year, month, half, income: 0, saved: 0, created_at: now, updated_at: now };
+        s.months.add(m);
+        out.value = m;
+        if (!copyFromId) return;
+        onReq(s.entries.index('month_id').getAll(copyFromId), src => {
+          src.forEach((e, i) => s.entries.add({
+            id: uid(), month_id: m.id, type: e.type, category: e.category,
+            name: e.name, planned: e.planned, actual: 0,
+            created_at: now + i, updated_at: now,
+          }));
+        });
+      });
+      onDataChanged();
+      return created;
+    } catch (e) {
+      // уникальный индекс по периоду: его уже создали в другой вкладке
+      if (e && e.name === 'ConstraintError') return { error: 'exists' };
+      flash('Не сохранилось: ' + (e && e.message || e), true);
+      throw e;
+    }
+  },
+
+  updateMonth: (id, patch) => write('months', s => patchRow(s.months, id, patch)),
+
+  createEntry: row => write('entries', (s, out) => {
+    const now = Date.now();
+    const e = { id: uid(), ...row, created_at: now, updated_at: now };
+    s.entries.add(e);
+    out.value = e;
+  }),
+  updateEntry: (id, patch) => write('entries', s => patchRow(s.entries, id, patch)),
+  deleteEntry: id => write('entries', s => { s.entries.delete(id); }),
+
+  listBacklog: () => tx('backlog', 'readonly', (s, out) =>
+    onReq(s.backlog.getAll(), v => { out.value = sortRows(v); })),
+  createBacklog: row => write('backlog', (s, out) => {
+    const now = Date.now();
+    const b = { id: uid(), ...row, created_at: now, updated_at: now };
+    s.backlog.add(b);
+    out.value = b;
+  }),
+  updateBacklog: (id, patch) => write('backlog', s => patchRow(s.backlog, id, patch)),
+  deleteBacklog: id => write('backlog', s => { s.backlog.delete(id); }),
+
+  entryToBacklog: eid => write(['entries', 'backlog'], (s, out, t) => {
+    onReq(s.entries.get(eid), e => {
+      if (!e) return fail(out, t, 'запись не найдена');
+      const now = Date.now();
+      const b = { id: uid(), category: e.category, name: e.name, planned: e.planned, created_at: now, updated_at: now };
+      s.backlog.add(b);
+      s.entries.delete(eid);
+      out.value = b;
+    });
+  }),
+
+  backlogToEntry: (bid, monthId) => write(['entries', 'backlog', 'months'], (s, out, t) => {
+    onReq(s.months.get(monthId), m => {
+      if (!m) return fail(out, t, 'период не найден');
+      onReq(s.backlog.get(bid), b => {
+        if (!b) return fail(out, t, 'запись не найдена');
+        const now = Date.now();
+        const e = {
+          id: uid(), month_id: monthId, type: 'planned', category: b.category,
+          name: b.name, planned: b.planned, actual: 0, created_at: now, updated_at: now,
+        };
+        s.entries.add(e);
+        s.backlog.delete(bid);
+        out.value = e;
+      });
+    });
+  }),
+
+  saveCategories: list => write('meta', s => { s.meta.put({ key: 'categories', value: list }); }),
+
+  // удаление категории: её записи переезжают в другую, всё одной транзакцией
+  deleteCategory: (catId, toId, list) => write(['entries', 'backlog', 'meta'], s => {
+    ['entries', 'backlog'].forEach(name => {
+      onReq(s[name].getAll(), rows => rows
+        .filter(r => r.category === catId)
+        .forEach(r => s[name].put({ ...r, category: toId, updated_at: Date.now() })));
+    });
+    s.meta.put({ key: 'categories', value: list });
+  }),
+
+  snapshot: () => tx(['months', 'entries', 'backlog', 'meta'], 'readonly', (s, out) => {
+    out.value = { app: 'budget', format: BACKUP_FORMAT, exportedAt: new Date().toISOString() };
+    onReq(s.meta.get('categories'), r => { out.value.categories = r ? r.value : DEFAULT_CATS; });
+    onReq(s.months.getAll(), v => { out.value.months = v; });
+    onReq(s.entries.getAll(), v => { out.value.entries = v; });
+    onReq(s.backlog.getAll(), v => { out.value.backlog = v; });
+  }),
+
+  // замена всех данных; прежнее состояние сохраняется для отката
+  restore: (data, previous) => write(['months', 'entries', 'backlog', 'meta'], s => {
+    s.months.clear(); s.entries.clear(); s.backlog.clear();
+    data.months.forEach(r => s.months.add(r));
+    data.entries.forEach(r => s.entries.add(r));
+    data.backlog.forEach(r => s.backlog.add(r));
+    s.meta.put({ key: 'categories', value: data.categories });
+    if (previous) s.meta.put({ key: 'preImport', value: previous });
+  }),
+};
+
+// ── после каждой записи ──────────────────────────────────────────────────────
+
+const bc = 'BroadcastChannel' in window ? new BroadcastChannel('budget-free') : null;
+
+function onDataChanged() {
+  if (bc) bc.postMessage('changed');
+  meta.lastChangeAt = Date.now();
+  setMeta('lastChangeAt', meta.lastChangeAt).catch(() => {});
+  scheduleFileSave();
+  requestPersist();
+  renderBanner();
+}
+
+let persistAsked = false;
+async function requestPersist() {
+  if (persistAsked || !navigator.storage || !navigator.storage.persist) return;
+  persistAsked = true;
+  try { await navigator.storage.persist(); } catch (_) { /* не поддерживается */ }
+}
+
+// ── вкладки: правка в одной — перечитывание в остальных ──────────────────────
+
+let reloadQueued = false;
+const isEditing = () =>
+  !!document.activeElement && document.activeElement.matches('main input, main select');
+
+function queueReload() {
+  if (isEditing()) { reloadQueued = true; return; }
+  reloadQueued = false;
+  init();
+}
+
+if (bc) bc.onmessage = () => queueReload();
+
+document.addEventListener('focusout', () => {
+  setTimeout(() => {
+    if (!reloadQueued || isEditing()) return;
+    queueReload();
+  }, 150);
+});
+
+// ── navigation ───────────────────────────────────────────────────────────────
+
+function shiftMonth(dir) {
+  if (dir > 0) {
+    if (state.half === 1) { state.half = 2; }
+    else { state.half = 1; state.month++; if (state.month > 12) { state.month = 1; state.year++; } }
+  } else {
+    if (state.half === 2) { state.half = 1; }
+    else { state.half = 2; state.month--; if (state.month < 1) { state.month = 12; state.year--; } }
+  }
+  loadCurrentMonth();
+}
+
+// ── init / load ───────────────────────────────────────────────────────────────
+
+async function loadMeta() {
+  const [c, lb, lc, pre] = await Promise.all([
+    getMeta('categories'), getMeta('lastBackupAt'), getMeta('lastChangeAt'), getMeta('preImport'),
+  ]);
+  cats = Array.isArray(c) && c.length ? c : DEFAULT_CATS;
+  meta.lastBackupAt = lb || 0;
+  meta.lastChangeAt = lc || 0;
+  meta.hasPreImport = !!pre;
+}
+
+async function init() {
+  await loadMeta();
+  if (state.catFilter !== 'all' && !cats.some(c => c.id === state.catFilter)) state.catFilter = 'all';
+  const [months, backlog] = await Promise.all([api.listMonths(), api.listBacklog()]);
+  state.allMonths = months;
+  state.backlog = backlog;
+  renderTabs();
+  await loadCurrentMonth();
+  renderBanner();
+  if (!$('settings-overlay').classList.contains('hidden')) renderSettings();
+}
+
+let loadToken = 0;
+async function loadCurrentMonth() {
+  const token = ++loadToken;
+  const { year, month, half } = state;
+  $('month-label-text').textContent = `${MN[month-1]} ${year} · ${half === 1 ? '1-я пол.' : '2-я пол.'}`;
+
+  const found = state.allMonths.find(m => m.year === year && m.month === month && m.half === half);
+
+  if (!found) {
+    const prev = findPrev(year, month, half);
+    state.prevMonthId = prev ? prev.id : null;
+    $('empty-title').textContent = `Бюджет на ${MN[month-1].toLowerCase()} ${year} (${half === 1 ? '1-я пол.' : '2-я пол.'}) не создан`;
+    $('copy-option').style.display = prev ? 'flex' : 'none';
+    $('copy-cb').checked = !!prev;
+    $('empty-state').classList.remove('hidden');
+    $('budget-view').classList.add('hidden');
+    state.monthId = null; state.entries = [];
+    renderBacklog();
+    return;
+  }
+
+  const data = await api.getMonth(found.id);
+  if (token !== loadToken) return; // пока читали, пользователь переключил период
+
+  $('empty-state').classList.add('hidden');
+  $('budget-view').classList.remove('hidden');
+
+  state.monthId = found.id;
+  state.income  = data.month.income;
+  state.saved   = data.month.saved;
+  state.entries = data.entries;
+
+  $('income-inp').value = state.income || '';
+  $('saved-inp').value  = state.saved  || '';
+
+  renderAll();
+  renderBacklog();
+}
+
+function findPrev(year, month, half) {
+  let py = year, pm = month, ph = half - 1;
+  if (ph < 1) { ph = 2; pm--; if (pm < 1) { pm = 12; py--; } }
+  return state.allMonths.find(m => m.year === py && m.month === pm && m.half === ph) || null;
+}
+
+// ── create month ─────────────────────────────────────────────────────────────
+
+async function createCurrentMonth() {
+  const copyId = $('copy-cb').checked ? state.prevMonthId : null;
+  const res = await api.createMonth(state.year, state.month, state.half, copyId);
+  if (res.error) { await init(); return; }
+  state.allMonths.push(res);
+  loadCurrentMonth();
+}
+
+// ── save income / saved ───────────────────────────────────────────────────────
+
+async function saveMonthFields() {
+  if (!state.monthId) return;
+  const income = num($('income-inp').value);
+  const saved  = num($('saved-inp').value);
+  if (income === state.income && saved === state.saved) return;
+  state.income = income; state.saved = saved;
+  await api.updateMonth(state.monthId, { income, saved });
+  flash('Сохранено');
+  renderSummary();
+}
+
+// ── categories ────────────────────────────────────────────────────────────────
+
+const catById = id => cats.find(c => c.id === id);
+const catColor = id => (catById(id) || {}).color || '#94a3b8';
+const defaultCat = () => cats[cats.length - 1].id;
+
+function catSelect(cat, handler) {
+  const opts = (catById(cat) ? '' : `<option value="${esc(cat)}" selected>—</option>`)
+    + cats.map(c => `<option value="${c.id}" ${c.id === cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+  return `<select class="cat-sel" style="--cat:${catColor(cat)}" onchange="${handler}">${opts}</select>`;
+}
+
+function paintSelect(sel) { sel.style.setProperty('--cat', catColor(sel.value)); }
+
+function filterCat(cat) {
+  state.catFilter = cat;
+  renderTabs();
+  renderPlanned();
+}
+
+function renderTabs() {
+  const tabs = [{ id: 'all', name: 'Все', color: 'var(--text)' }, ...cats];
+  $('cat-tabs').innerHTML = tabs.map(c => `
+    <button class="cat-tab ${state.catFilter === c.id ? 'active' : ''}" style="--cat:${c.color}"
+      onclick="filterCat('${c.id}')">${esc(c.name)}</button>`).join('');
+}
+
+// ── render ────────────────────────────────────────────────────────────────────
+
+function renderAll() { renderSummary(); renderMandatory(); renderPlanned(); }
+
+function renderSummary() {
+  const mandatory = state.entries.filter(e => e.type === 'mandatory').reduce((s, e) => s + e.planned, 0);
+  const spent     = state.entries.filter(e => e.type === 'planned').reduce((s, e) => s + e.actual, 0);
+  const remain    = state.income - mandatory - spent - state.saved;
+
+  $('s-income').textContent    = fmt(state.income);
+  $('s-mandatory').textContent = fmt(mandatory);
+  $('s-spent').textContent     = fmt(spent);
+  $('s-saved').textContent     = fmt(state.saved);
+  $('s-remain').textContent    = (remain < 0 ? '−' : '') + fmtAbs(remain);
+
+  $('s-remain-card').classList.toggle('red-accent', remain < 0);
+}
+
+function renderMandatory() {
+  const rows = state.entries.filter(e => e.type === 'mandatory');
+  const total = rows.reduce((s, e) => s + e.planned, 0);
+  $('mandatory-total').textContent = rows.length ? fmt(total) : '';
+
+  $('mandatory-body').innerHTML = rows.map(e => `
+    <tr data-eid="${e.id}">
+      <td class="col-cat">${catSelect(e.category, `onCatChange('${e.id}',this)`)}</td>
+      <td class="col-name">
+        <input class="ci" type="text" value="${esc(e.name)}" placeholder="Название"
+          onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
+      </td>
+      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+        <input class="ci r" type="number" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
+          data-field="planned" onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
+      </td>
+      <td class="col-del"><button class="del-btn" tabindex="-1" onclick="deleteEntry('${e.id}')">×</button></td>
+    </tr>
+  `).join('');
+}
+
+function plannedTotals() {
+  const all      = state.entries.filter(e => e.type === 'planned');
+  const filtered = state.catFilter === 'all' ? all : all.filter(e => e.category === state.catFilter);
+  const totPlan   = filtered.reduce((s, e) => s + e.planned, 0);
+  const totActual = filtered.reduce((s, e) => s + e.actual, 0);
+  return { filtered, totPlan, totActual, totRem: totPlan - totActual };
+}
+
+function remInfo(e) {
+  const rem = e.planned - e.actual;
+  return {
+    cls: rem > 0 ? 'rem-pos' : rem < 0 ? 'rem-neg' : 'rem-zero',
+    text: e.planned > 0 ? ((rem < 0 ? '−' : '') + fmtAbs(rem)) : '—',
+  };
+}
+
+function renderPlannedTotals() {
+  const { filtered, totPlan, totActual, totRem } = plannedTotals();
+  $('planned-total').textContent = filtered.length ? `${fmt(totActual)} из ${fmt(totPlan)}` : '';
+  const foot = $('planned-foot');
+  if (filtered.length > 1) {
+    const cls = totRem >= 0 ? 'rem-pos' : 'rem-neg';
+    const f = isMobile() ? fmtK : fmt;
+    const fA = isMobile() ? n => fmtK(Math.abs(n)) : fmtAbs;
+    foot.innerHTML = `
+      <tr class="totals-row">
+        <td colspan="2">Итого (${filtered.length})</td>
+        <td class="r">${f(totPlan)}</td>
+        <td class="r">${f(totActual)}</td>
+        <td class="r ${cls}">${(totRem < 0 ? '−' : '') + fA(totRem)}</td>
+        <td></td><td></td>
+      </tr>`;
+  } else {
+    foot.innerHTML = '';
+  }
+}
+
+function renderPlanned() {
+  const { filtered } = plannedTotals();
+  $('planned-body').innerHTML = filtered.map(e => {
+    const r = remInfo(e);
+    return `
+    <tr data-eid="${e.id}">
+      <td class="col-cat">${catSelect(e.category, `onCatChange('${e.id}',this)`)}</td>
+      <td class="col-name">
+        <input class="ci" type="text" value="${esc(e.name)}" placeholder="Название"
+          onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
+      </td>
+      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+        <input class="ci r" type="number" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
+          data-field="planned" onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
+      </td>
+      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+        <input class="ci r" type="number" inputmode="decimal" value="${e.actual || ''}" placeholder="0"
+          data-field="actual" onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
+      </td>
+      <td class="col-num"><span class="rem-cell ${r.cls}">${r.text}</span></td>
+      <td class="col-move"><button class="tobacklog-btn" tabindex="-1" title="В бэклог" onclick="entryToBacklog('${e.id}')">↓</button></td>
+      <td class="col-del"><button class="del-btn" tabindex="-1" onclick="deleteEntry('${e.id}')">×</button></td>
+    </tr>`;
+  }).join('');
+  renderPlannedTotals();
+}
+
+// ── entry CRUD ────────────────────────────────────────────────────────────────
+
+function getRowValues(eid) {
+  const row = document.querySelector(`tr[data-eid="${eid}"]`);
+  const entry = state.entries.find(e => e.id === eid);
+  if (!row || !entry) return null;
+  const data = { ...entry };
+  const nameInp = row.querySelector('input[type=text]');
+  if (nameInp) data.name = nameInp.value;
+  row.querySelectorAll('input[type=number]').forEach(inp => {
+    data[inp.dataset.field] = num(inp.value);
+  });
+  const sel = row.querySelector('select');
+  if (sel) data.category = sel.value;
+  return data;
+}
+
+async function saveEntry(eid) {
+  const d = getRowValues(eid);
+  if (!d) return;
+  const idx = state.entries.findIndex(e => e.id === eid);
+  const cur = state.entries[idx];
+  const patch = { category: d.category, name: d.name, planned: d.planned || 0, actual: d.actual || 0 };
+  if (Object.keys(patch).every(k => cur[k] === patch[k])) return;
+  await api.updateEntry(eid, patch);
+  state.entries[idx] = { ...cur, ...patch };
+  renderSummary();
+  if (d.type === 'mandatory') {
+    const total = state.entries.filter(e => e.type === 'mandatory').reduce((s, e) => s + e.planned, 0);
+    $('mandatory-total').textContent = fmt(total);
+  } else {
+    patchPlannedRow(eid);
+  }
+}
+
+function patchPlannedRow(eid) {
+  const entry = state.entries.find(e => e.id === eid);
+  if (!entry) return;
+  const span = document.querySelector(`tr[data-eid="${eid}"] .rem-cell`);
+  if (span) {
+    const r = remInfo(entry);
+    span.className = `rem-cell ${r.cls}`;
+    span.textContent = r.text;
+  }
+  renderPlannedTotals();
+}
+
+async function onCatChange(eid, sel) {
+  paintSelect(sel);
+  const entry = state.entries.find(e => e.id === eid);
+  if (!entry) return;
+  await api.updateEntry(eid, { category: sel.value });
+  entry.category = sel.value;
+  if (entry.type === 'planned' && state.catFilter !== 'all') renderPlanned();
+  else if (entry.type === 'planned') renderPlannedTotals();
+}
+
+function deleteEntry(eid) {
+  const entry = state.entries.find(e => e.id === eid);
+  openConfirm('Удалить запись?', entry && entry.name ? `«${entry.name}»` : '', 'Удалить', async () => {
+    await api.deleteEntry(eid);
+    state.entries = state.entries.filter(e => e.id !== eid);
+    renderAll();
+  });
+}
+
+async function addEntry(type) {
+  if (!state.monthId) return;
+  const cat = (state.catFilter !== 'all' && type === 'planned') ? state.catFilter : defaultCat();
+  const entry = await api.createEntry({
+    month_id: state.monthId, type, category: cat, name: '', planned: 0, actual: 0,
+  });
+  state.entries.push(entry);
+  if (type === 'mandatory') renderMandatory();
+  else renderPlanned();
+  const input = document.querySelector(`tr[data-eid="${entry.id}"] input[type=text]`);
+  if (input) input.focus();
+}
+
+async function entryToBacklog(eid) {
+  const item = await api.entryToBacklog(eid);
+  state.entries = state.entries.filter(e => e.id !== eid);
+  state.backlog.push(item);
+  renderPlanned();
+  renderSummary();
+  renderBacklog();
+  flash('Перенесено в бэклог');
+}
+
+// ── calendar ─────────────────────────────────────────────────────────────────
+
+let calYear = new Date().getFullYear();
+let calOpen = false;
+
+function toggleCalendar(e) {
+  e.stopPropagation();
+  calOpen = !calOpen;
+  if (calOpen) {
+    calYear = state.year;
+    renderCalendar();
+    $('cal-popup').classList.remove('hidden');
+  } else {
+    $('cal-popup').classList.add('hidden');
+  }
+}
+
+document.addEventListener('click', e => {
+  if (calOpen && !e.target.closest('.cal-wrapper')) {
+    calOpen = false;
+    $('cal-popup').classList.add('hidden');
+  }
+});
+
+function calPickYear(dir) {
+  calYear += dir;
+  renderCalendar();
+}
+
+function renderCalendar() {
+  $('cal-year-display').textContent = calYear;
+  const short = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  $('cal-months-grid').innerHTML = short.map((mn, i) => {
+    const m = i + 1;
+    const has = h => state.allMonths.some(x => x.year === calYear && x.month === m && x.half === h);
+    const cur = h => state.year === calYear && state.month === m && state.half === h;
+    const btn = h => `<button class="cal-half ${has(h) ? 'has-data' : ''} ${cur(h) ? 'is-current' : ''}"
+          onclick="pickPeriod(${calYear},${m},${h})">${h}</button>`;
+    return `<div class="cal-month">
+      <div class="cal-month-name">${mn}</div>
+      <div class="cal-halves">${btn(1)}${btn(2)}</div>
+    </div>`;
+  }).join('');
+}
+
+function pickPeriod(y, m, h) {
+  state.year = y; state.month = m; state.half = h;
+  calOpen = false;
+  $('cal-popup').classList.add('hidden');
+  loadCurrentMonth();
+}
+
+// ── confirm modal ─────────────────────────────────────────────────────────────
+
+let confirmCallback = null;
+
+function openConfirm(title, text, okLabel, callback) {
+  confirmCallback = callback;
+  $('confirm-title').textContent = title;
+  $('confirm-name').textContent = text || '';
+  $('confirm-ok').textContent = okLabel;
+  $('confirm-overlay').classList.remove('hidden');
+}
+
+function closeConfirm() {
+  $('confirm-overlay').classList.add('hidden');
+  confirmCallback = null;
+}
+
+function execConfirm() {
+  const cb = confirmCallback;
+  closeConfirm();
+  if (cb) cb();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('confirm-overlay').classList.contains('hidden')) closeConfirm();
+  else if (!$('settings-overlay').classList.contains('hidden')) closeSettings();
+});
+
+// ── backlog ───────────────────────────────────────────────────────────────────
+
+let backlogOpen = false;
+
+function toggleBacklog() {
+  backlogOpen = !backlogOpen;
+  $('backlog-content').classList.toggle('hidden', !backlogOpen);
+  $('backlog-arrow').textContent = backlogOpen ? '▾' : '▸';
+}
+
+function renderBacklogTotal() {
+  $('backlog-total').textContent = state.backlog.length
+    ? fmt(state.backlog.reduce((s, b) => s + b.planned, 0)) : '';
+}
+
+function renderBacklog() {
+  renderBacklogTotal();
+  $('backlog-body').innerHTML = state.backlog.map(b => `
+    <tr data-bid="${b.id}">
+      <td class="col-cat">${catSelect(b.category, `onBacklogCatChange('${b.id}',this)`)}</td>
+      <td class="col-name">
+        <input class="ci" type="text" value="${esc(b.name)}" placeholder="Название"
+          onblur="saveBacklogEntry('${b.id}')" onkeydown="enterBlur(event)">
+      </td>
+      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+        <input class="ci r" type="number" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
+          onblur="saveBacklogEntry('${b.id}')" onkeydown="enterBlur(event)">
+      </td>
+      <td class="col-move">
+        <button class="move-btn" tabindex="-1" title="Перенести в планируемые"
+          onclick="moveBacklogEntry('${b.id}')" ${!state.monthId ? 'disabled' : ''}>+</button>
+      </td>
+      <td class="col-del">
+        <button class="del-btn" tabindex="-1" onclick="deleteBacklogEntry('${b.id}')">×</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function onBacklogCatChange(bid, sel) {
+  paintSelect(sel);
+  const item = state.backlog.find(b => b.id === bid);
+  if (!item) return;
+  await api.updateBacklog(bid, { category: sel.value });
+  item.category = sel.value;
+}
+
+async function saveBacklogEntry(bid) {
+  const row = document.querySelector(`tr[data-bid="${bid}"]`);
+  const item = state.backlog.find(b => b.id === bid);
+  if (!row || !item) return;
+  const patch = {
+    name: row.querySelector('input[type=text]').value,
+    planned: num(row.querySelector('input[type=number]').value),
+  };
+  if (patch.name === item.name && patch.planned === item.planned) return;
+  await api.updateBacklog(bid, patch);
+  Object.assign(item, patch);
+  renderBacklogTotal();
+}
+
+async function addBacklogEntry() {
+  const item = await api.createBacklog({ category: defaultCat(), name: '', planned: 0 });
+  state.backlog.push(item);
+  if (!backlogOpen) toggleBacklog();
+  renderBacklog();
+  const input = document.querySelector(`tr[data-bid="${item.id}"] input[type=text]`);
+  if (input) input.focus();
+}
+
+function deleteBacklogEntry(bid) {
+  const item = state.backlog.find(b => b.id === bid);
+  openConfirm('Удалить запись?', item && item.name ? `«${item.name}»` : '', 'Удалить', async () => {
+    await api.deleteBacklog(bid);
+    state.backlog = state.backlog.filter(b => b.id !== bid);
+    renderBacklog();
+  });
+}
+
+async function moveBacklogEntry(bid) {
+  if (!state.monthId) return;
+  const entry = await api.backlogToEntry(bid, state.monthId);
+  state.backlog = state.backlog.filter(b => b.id !== bid);
+  state.entries.push(entry);
+  renderBacklog();
+  renderPlanned();
+  renderSummary();
+  flash('Перенесено в планируемые');
+}
+
+// ── backup: export / import ──────────────────────────────────────────────────
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+async function markBackedUp() {
+  meta.lastBackupAt = Date.now();
+  await setMeta('lastBackupAt', meta.lastBackupAt);
+  renderBanner();
+  renderSettings();
+}
+
+async function exportBackup() {
+  const data = await api.snapshot();
+  const name = `budget-${new Date().toISOString().slice(0, 10)}.json`;
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  // на телефоне «Поделиться» даёт сохранить в Файлы / iCloud / Google Drive / мессенджер
+  const file = new File([blob], name, { type: 'application/json' });
+  const touch = matchMedia('(pointer: coarse)').matches;
+  if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Резервная копия бюджета' });
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      downloadBlob(blob, name);
+    }
+  } else {
+    downloadBlob(blob, name);
+  }
+  await markBackedUp();
+  flash('Копия сохранена');
+}
+
+function pickImportFile() { $('import-file').click(); }
+
+function asId(v) {
+  const s = String(v ?? '');
+  if (!SAFE_ID.test(s)) throw new Error('некорректный id: ' + s.slice(0, 20));
+  return s;
+}
+
+// Проверка файла копии до того, как что-то будет стёрто
+function normalizeBackup(raw) {
+  if (!raw || raw.app !== 'budget' || !Array.isArray(raw.months)) {
+    throw new Error('это не резервная копия бюджета');
+  }
+  if ((raw.format || 1) > BACKUP_FORMAT) {
+    throw new Error('копия сделана более новой версией приложения, обнови страницу');
+  }
+  const now = Date.now();
+  const periods = new Set();
+  const months = raw.months.map(m => {
+    const r = {
+      id: asId(m.id), year: Math.trunc(num(m.year)), month: Math.trunc(num(m.month)),
+      half: Math.trunc(num(m.half)), income: num(m.income), saved: num(m.saved),
+      created_at: m.created_at || now, updated_at: m.updated_at || now,
+    };
+    if (r.month < 1 || r.month > 12 || (r.half !== 1 && r.half !== 2) || r.year < 2000) {
+      throw new Error('некорректный период ' + r.id);
+    }
+    const key = `${r.year}-${r.month}-${r.half}`;
+    if (periods.has(key)) throw new Error('период повторяется: ' + key);
+    periods.add(key);
+    return r;
+  });
+  const monthIds = new Set(months.map(m => m.id));
+  const used = new Set();
+  const entries = (raw.entries || []).map((e, i) => {
+    const r = {
+      id: asId(e.id), month_id: asId(e.month_id),
+      type: e.type === 'mandatory' ? 'mandatory' : 'planned',
+      category: asId(e.category), name: String(e.name ?? '').slice(0, 200),
+      planned: num(e.planned), actual: num(e.actual),
+      created_at: e.created_at || now + i, updated_at: e.updated_at || now,
+    };
+    if (!monthIds.has(r.month_id)) throw new Error('запись ссылается на несуществующий период');
+    used.add(r.category);
+    return r;
+  });
+  const backlog = (raw.backlog || []).map((b, i) => {
+    const r = {
+      id: asId(b.id), category: asId(b.category), name: String(b.name ?? '').slice(0, 200),
+      planned: num(b.planned), created_at: b.created_at || now + i, updated_at: b.updated_at || now,
+    };
+    used.add(r.category);
+    return r;
+  });
+  const categories = (Array.isArray(raw.categories) ? raw.categories : []).map(c => ({
+    id: asId(c.id),
+    name: String(c.name ?? '').slice(0, 24) || 'Без имени',
+    color: COLORS.includes(c.color) ? c.color : COLORS[COLORS.length - 1],
+  }));
+  // категории, на которые ссылаются записи, но которых нет в списке
+  used.forEach(id => {
+    if (!categories.some(c => c.id === id)) {
+      categories.push({ id, name: id, color: COLORS[categories.length % COLORS.length] });
+    }
+  });
+  if (!categories.length) categories.push(...DEFAULT_CATS);
+  return { months, entries, backlog, categories };
+}
+
+async function onImportFile(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  let data;
+  try {
+    data = normalizeBackup(JSON.parse(await file.text()));
+  } catch (e) {
+    flash('Файл не подошёл: ' + e.message, true);
+    return;
+  }
+  const hasData = state.allMonths.length || state.backlog.length;
+  openConfirm(
+    'Восстановить из копии?',
+    `В файле: периодов ${data.months.length}, записей ${data.entries.length + data.backlog.length}.`
+      + (hasData ? ' Текущие данные будут заменены — их можно будет вернуть из настроек.' : ''),
+    'Восстановить',
+    async () => {
+      const previous = hasData ? await api.snapshot() : null;
+      await api.restore(data, previous);
+      await init();
+      flash('Данные восстановлены');
+    }
+  );
+}
+
+async function undoImport() {
+  const prev = await getMeta('preImport');
+  if (!prev) return;
+  openConfirm('Вернуть прежние данные?', 'Текущие данные заменятся теми, что были до восстановления.', 'Вернуть', async () => {
+    const current = await api.snapshot();
+    await api.restore(normalizeBackup(prev), current);
+    await init();
+    flash('Данные возвращены');
+  });
+}
+
+// ── backup: автосохранение в файл (Chrome / Edge на компьютере) ─────────────
+// Файл лежит вне браузера: очистка данных сайта его не трогает.
+
+let fileHandle = null;
+let filePerm = 'none';   // none | prompt | granted
+let fileTimer = null;
+
+async function loadFileHandle() {
+  if (!fsSupported) return;
+  fileHandle = (await getMeta('fileHandle')) || null;
+  filePerm = fileHandle ? await fileHandle.queryPermission({ mode: 'readwrite' }) : 'none';
+}
+
+async function chooseBackupFile() {
+  try {
+    fileHandle = await window.showSaveFilePicker({
+      suggestedName: 'budget-autosave.json',
+      types: [{ description: 'Резервная копия', accept: { 'application/json': ['.json'] } }],
+    });
+  } catch (e) {
+    if (e.name !== 'AbortError') flash('Не удалось выбрать файл: ' + e.message, true);
+    return;
+  }
+  await setMeta('fileHandle', fileHandle);
+  filePerm = 'granted';
+  await writeBackupFile();
+}
+
+async function resumeBackupFile() {
+  if (!fileHandle) return;
+  filePerm = await fileHandle.requestPermission({ mode: 'readwrite' });
+  if (filePerm === 'granted') await writeBackupFile();
+  else { renderBanner(); renderSettings(); }
+}
+
+async function disableBackupFile() {
+  clearTimeout(fileTimer);
+  fileHandle = null;
+  filePerm = 'none';
+  await delMeta('fileHandle');
+  renderBanner();
+  renderSettings();
+}
+
+function scheduleFileSave() {
+  if (filePerm !== 'granted') return;
+  clearTimeout(fileTimer);
+  fileTimer = setTimeout(writeBackupFile, 1500);
+}
+
+async function writeBackupFile() {
+  clearTimeout(fileTimer);
+  fileTimer = null;
+  if (!fileHandle || filePerm !== 'granted') return;
+  try {
+    const data = await api.snapshot();
+    // createWritable пишет во временный файл и подменяет им оригинал при close()
+    const w = await fileHandle.createWritable();
+    await w.write(JSON.stringify(data));
+    await w.close();
+    await markBackedUp();
+  } catch (e) {
+    filePerm = await fileHandle.queryPermission({ mode: 'readwrite' }).catch(() => 'prompt');
+    flash('Автосохранение в файл не удалось: ' + e.message, true);
+    renderBanner();
+    renderSettings();
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && fileTimer) writeBackupFile();
+});
+
+// ── banner ────────────────────────────────────────────────────────────────────
+
+let bannerDismissed = false;
+
+function renderBanner() {
+  const el = $('banner');
+  const hasData = state.allMonths.length > 0 || state.backlog.length > 0;
+  const stale = hasData && meta.lastChangeAt > meta.lastBackupAt
+    && Date.now() - meta.lastBackupAt > STALE_BACKUP_MS;
+  const iosHint = isIOS && !isStandalone
+    ? ' На iPhone добавь страницу на экран «Домой» (Поделиться → На экран «Домой»): Safari стирает данные сайтов, которые не открывали 7 дней.'
+    : '';
+  let html = '';
+  let info = false;
+
+  if (!hasData) {
+    info = true;
+    html = `<div class="banner-text"><b>Данные хранятся только на этом устройстве</b>
+      Без регистрации и сервера. Раз в несколько дней сохраняй резервную копию — она спасёт при очистке браузера или смене телефона.${iosHint}</div>
+      <div class="banner-actions"><button class="btn-secondary btn-sm" onclick="pickImportFile()">Восстановить из копии</button></div>`;
+  } else if (fileHandle && filePerm === 'prompt') {
+    html = `<div class="banner-text"><b>Автосохранение в файл на паузе</b>
+      Браузер просит заново разрешить запись в файл.</div>
+      <div class="banner-actions"><button class="btn-primary btn-sm" onclick="resumeBackupFile()">Разрешить</button></div>`;
+  } else if (stale && filePerm !== 'granted' && !bannerDismissed) {
+    const when = meta.lastBackupAt
+      ? `Последняя копия — ${daysAgo(meta.lastBackupAt)} дн. назад.`
+      : 'Резервной копии ещё нет.';
+    html = `<div class="banner-text"><b>${when}</b>
+      Если очистить данные браузера, записи пропадут без возможности восстановления.${iosHint}</div>
+      <div class="banner-actions">
+        <button class="btn-primary btn-sm" onclick="exportBackup()">Сохранить копию</button>
+        <button class="btn-secondary btn-sm" onclick="bannerDismissed = true; renderBanner()">Позже</button>
+      </div>`;
+  }
+
+  el.innerHTML = html;
+  el.classList.toggle('info', info);
+  el.classList.toggle('hidden', !html);
+  $('settings-badge').classList.toggle('hidden', !(stale && filePerm !== 'granted'));
+}
+
+// ── settings ──────────────────────────────────────────────────────────────────
+
+function openSettings() {
+  renderSettings();
+  $('settings-overlay').classList.remove('hidden');
+}
+
+function closeSettings() {
+  document.activeElement && document.activeElement.blur();
+  $('settings-overlay').classList.add('hidden');
+}
+
+async function renderSettings() {
+  $('backup-status').innerHTML = meta.lastBackupAt
+    ? `Последняя копия: <b>${fmtDate(meta.lastBackupAt)}</b>.`
+    : '<b>Копий ещё не было.</b> Сохрани файл в облако (iCloud, Google Drive) или отправь себе в мессенджер.';
+
+  $('autosave-block').classList.toggle('hidden', !fsSupported);
+  if (fsSupported) {
+    let status, actions;
+    if (!fileHandle) {
+      status = 'Автосохранение в файл выключено. Можно выбрать файл, например в папке Google Drive или Яндекс Диска на компьютере — копия будет обновляться после каждой правки.';
+      actions = '<button class="btn-secondary btn-sm" onclick="chooseBackupFile()">Выбрать файл</button>';
+    } else if (filePerm === 'granted') {
+      status = `Автосохранение включено: <b>${esc(fileHandle.name)}</b>.`;
+      actions = '<button class="btn-secondary btn-sm" onclick="disableBackupFile()">Отключить</button>';
+    } else {
+      status = `Автосохранение в <b>${esc(fileHandle.name)}</b> на паузе: нужно разрешение браузера.`;
+      actions = '<button class="btn-primary btn-sm" onclick="resumeBackupFile()">Разрешить</button>'
+        + '<button class="btn-secondary btn-sm" onclick="disableBackupFile()">Отключить</button>';
+    }
+    $('autosave-status').innerHTML = status;
+    $('autosave-actions').innerHTML = actions;
+  }
+  $('undo-import-btn').classList.toggle('hidden', !meta.hasPreImport);
+
+  renderCatEditor();
+
+  let persisted = false;
+  try { persisted = !!(navigator.storage && await navigator.storage.persisted()); } catch (_) {}
+  $('storage-status').innerHTML =
+    'Только в этом браузере на этом устройстве, никуда не отправляются. '
+    + (persisted
+      ? 'Браузер <b>не удалит</b> их сам при нехватке места. '
+      : 'Браузер может удалить их сам при нехватке места. ')
+    + '<b>Очистка данных сайта вручную стирает всё</b> — от этого защищает только резервная копия.'
+    + (isIOS && !isStandalone
+      ? '<br><br>На iPhone добавь страницу на экран «Домой»: иначе Safari сотрёт данные, если сайт не открывали 7 дней.'
+      : '');
+}
+
+function renderCatEditor() {
+  $('cat-list').innerHTML = cats.map(c => `
+    <div class="cat-row" style="--cat:${c.color}">
+      <input class="cat-name" value="${esc(c.name)}" maxlength="24" placeholder="Название"
+        onchange="renameCat('${c.id}', this.value)" onkeydown="enterBlur(event)">
+      <div class="swatches">${COLORS.map(col => `
+        <button class="swatch ${col === c.color ? 'on' : ''}" style="background:${col}"
+          aria-label="Цвет" onclick="recolorCat('${c.id}','${col}')"></button>`).join('')}
+      </div>
+      <button class="del-btn" title="Удалить категорию" onclick="removeCat('${c.id}')"
+        ${cats.length < 2 ? 'disabled' : ''}>×</button>
+    </div>`).join('');
+}
+
+async function commitCats(list) {
+  await api.saveCategories(list);
+  cats = list;
+  afterCatsChange();
+}
+
+function afterCatsChange() {
+  if (state.catFilter !== 'all' && !catById(state.catFilter)) state.catFilter = 'all';
+  renderTabs();
+  if (state.monthId) renderAll();
+  renderBacklog();
+  renderCatEditor();
+}
+
+function renameCat(id, name) {
+  name = name.trim().slice(0, 24);
+  if (!name) { renderCatEditor(); return; }
+  commitCats(cats.map(c => c.id === id ? { ...c, name } : c));
+}
+
+function recolorCat(id, color) {
+  commitCats(cats.map(c => c.id === id ? { ...c, color } : c));
+}
+
+function addCat() {
+  const color = COLORS.find(col => !cats.some(c => c.color === col)) || COLORS[0];
+  commitCats([...cats, { id: uid(), name: 'Новая', color }]).then(() => {
+    const inputs = document.querySelectorAll('#cat-list .cat-name');
+    const last = inputs[inputs.length - 1];
+    if (last) { last.focus(); last.select(); }
+  });
+}
+
+function removeCat(id) {
+  if (cats.length < 2) return;
+  const cat = catById(id);
+  const rest = cats.filter(c => c.id !== id);
+  const to = rest[rest.length - 1];
+  openConfirm(
+    `Удалить категорию «${cat.name}»?`,
+    `Записи из неё во всех периодах перейдут в «${to.name}».`,
+    'Удалить',
+    async () => {
+      await api.deleteCategory(id, to.id, rest);
+      cats = rest;
+      await init();
+      afterCatsChange();
+    }
+  );
+}
+
+// ── start ─────────────────────────────────────────────────────────────────────
+
+(async () => {
+  if (!window.indexedDB) {
+    document.querySelector('main').innerHTML =
+      '<div class="empty-state"><h2>Браузер не поддерживает хранение данных</h2>'
+      + '<p>Открой страницу в обычном (не приватном) окне Chrome, Safari, Edge или Firefox.</p></div>';
+    return;
+  }
+  try {
+    await loadFileHandle();
+    await init();
+  } catch (e) {
+    flash('Не удалось открыть хранилище: ' + (e && e.message || e), true);
+    return;
+  }
+  if (state.allMonths.length || state.backlog.length) requestPersist();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
