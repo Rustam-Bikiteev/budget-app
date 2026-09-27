@@ -217,12 +217,15 @@ function renderAll() { renderSummary(); renderMandatory(); renderPlanned(); }
 function renderSummary() {
   const mandatory = state.entries.filter(e => e.type === 'mandatory').reduce((s, e) => s + e.planned, 0);
   const spent     = state.entries.filter(e => e.type === 'planned').reduce((s, e) => s + e.actual, 0);
-  const remain    = state.income - mandatory - spent - state.saved;
+  const allowed   = state.income - mandatory - state.saved;
+  const remain    = allowed - spent;
 
   $('s-income').textContent    = fmt(state.income);
   $('s-mandatory').textContent = fmt(mandatory);
   $('s-spent').textContent     = fmt(spent);
   $('s-saved').textContent     = fmt(state.saved);
+  $('s-allowed').textContent   = (allowed < 0 ? '−' : '') + fmtAbs(allowed);
+  $('s-allowed-card').classList.toggle('negative', allowed < 0);
   $('s-remain').textContent    = (remain < 0 ? '−' : '') + fmtAbs(remain);
 
   $('s-remain-card').classList.toggle('red-accent', remain < 0);
