@@ -15,7 +15,9 @@
 ## Файлы
 
 ```
-index.html             — всё приложение (разметка, стили, логика)
+index.html             — версия с Supabase: разметка, хранилище, вход, realtime
+shared/core.js         — общая логика обеих версий (расчёты, отрисовка, календарь, бэклог)
+shared/core.css        — общий интерфейс обеих версий
 manifest.webmanifest   — PWA-манифест
 icon-192.png / icon-512.png
 supabase_setup.sql     — включение RLS и политик (выполнить один раз)
@@ -31,7 +33,9 @@ supabase_setup.sql     — включение RLS и политик (выпол�
 
 ## Общедоступная версия (`free/`)
 
-`free/index.html` — local-first копия для всех желающих:
+`free/index.html` — local-first версия для всех желающих. Интерфейс и логику берёт
+из `shared/`, поэтому правка там меняет обе версии; в `free/index.html` — только
+хранилище IndexedDB, резервные копии и настройки категорий.
 https://rustam-bikiteev.github.io/budget-app/free/
 
 - без регистрации и сервера: данные в IndexedDB браузера пользователя

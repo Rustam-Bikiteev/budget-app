@@ -13,61 +13,9 @@
 <meta name="apple-mobile-web-app-title" content="Бюджет">
 <link rel="apple-touch-icon" href="../icon-192.png">
 <link rel="icon" href="../icon-192.png">
+<link rel="stylesheet" href="../shared/core.css">
 <style>
-:root {
-  --bg: #f1f5f9;
-  --surface: #ffffff;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #94a3b8;
-  --blue: #3b82f6;
-  --blue-light: #eff6ff;
-  --green: #10b981;
-  --green-light: #f0fdf4;
-  --amber: #f59e0b;
-  --amber-light: #fffbeb;
-  --red: #ef4444;
-  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 14px;
-  min-height: 100vh;
-}
-
-/* ── Header ── */
-header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: var(--shadow);
-}
-header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
-.month-nav { display: flex; align-items: center; gap: 10px; }
-.nav-btn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  width: 30px; height: 30px;
-  cursor: pointer;
-  font-size: 16px;
-  color: var(--text);
-  display: flex; align-items: center; justify-content: center;
-  transition: background .12s;
-  line-height: 1;
-}
-.nav-btn:hover { background: var(--bg); }
-.header-actions { display: flex; align-items: center; gap: 6px; }
+/* своё у local-first версии; общий интерфейс в shared/core.css */
 .icon-btn {
   background: none; border: 1px solid var(--border);
   border-radius: 6px; width: 30px; height: 30px;
@@ -83,27 +31,6 @@ header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
   background: var(--amber); border: 2px solid var(--surface);
 }
 
-/* ── Sync indicator ── */
-#sync-dot {
-  position: fixed; top: 62px; right: 12px; z-index: 600;
-  background: var(--text); color: #fff;
-  font-size: 11px; font-weight: 700;
-  padding: 4px 10px; border-radius: 20px;
-  opacity: 0; transition: opacity .2s; pointer-events: none;
-  max-width: calc(100vw - 24px);
-}
-#sync-dot.show { opacity: .85; }
-#sync-dot.err { background: var(--red); }
-
-/* ── Main ── */
-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
-  display: flex; flex-direction: column; gap: 20px;
-}
-#budget-view { display: flex; flex-direction: column; gap: 20px; }
-
 /* ── Banner ── */
 .banner {
   background: var(--amber-light);
@@ -117,214 +44,14 @@ main {
 .banner-text b { display: block; margin-bottom: 2px; }
 .banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ── Empty state ── */
-.empty-state {
-  background: var(--surface);
-  border-radius: 14px;
-  padding: 56px 24px;
-  text-align: center;
-  box-shadow: var(--shadow);
-  display: flex; flex-direction: column; align-items: center; gap: 16px;
-}
-.empty-state h2 { font-size: 20px; font-weight: 700; }
-.empty-state p { color: var(--muted); }
-.copy-option {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; cursor: pointer; color: var(--text);
-}
-.copy-option input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue); }
-
-/* ── Summary cards ── */
-.summary {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-}
-.s-card {
-  background: var(--surface);
-  border-radius: 10px;
-  padding: 14px 16px;
-  box-shadow: var(--shadow);
-}
-.s-card-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--muted);
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-.s-card-val {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: -.5px;
-}
-.s-card.accent { background: var(--blue); }
-.s-card.accent .s-card-label { color: rgba(255,255,255,.65); }
-.s-card.accent .s-card-val  { color: #fff; }
-.s-card.accent.red-accent { background: var(--red); }
-
-/* ── Section ── */
-.section {
-  background: var(--surface);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.section-header {
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.section-header h2 { font-size: 14px; font-weight: 700; }
-.section-total { font-size: 13px; font-weight: 700; color: var(--muted); }
-
-/* ── Income fields ── */
-.income-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-.income-field {
-  padding: 16px 20px;
-  border-right: 1px solid var(--border);
-}
-.income-field:last-child { border-right: none; }
-.income-field label {
-  display: block;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--muted);
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-.income-field input {
-  font-size: 24px;
-  font-weight: 800;
-  border: none; outline: none;
-  width: 100%;
-  color: var(--text);
-  background: transparent;
-  letter-spacing: -.5px;
-}
-.income-field input::placeholder { color: var(--muted); font-weight: 400; font-size: 20px; }
-.income-field input:focus { color: var(--blue); }
-
-/* ── Table ── */
-table { width: 100%; border-collapse: collapse; }
-thead tr { background: #f8fafc; }
-th {
-  padding: 8px 12px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--muted);
-  font-weight: 700;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  white-space: nowrap;
-}
-th.r { text-align: right; }
-td { border-bottom: 1px solid var(--border); vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tbody tr:hover td { background: #fafafa; }
-
-.col-name { width: auto; }
-.col-cat  { width: 110px; }
-.col-num  { width: 110px; }
-.col-del  { width: 38px; }
-
-/* cell inputs */
-.ci {
-  border: none; background: transparent;
-  font-size: 14px; font-family: inherit; color: var(--text);
-  padding: 13px 12px; width: 100%; display: block;
-}
-.ci:focus { outline: none; color: var(--blue); }
-.ci.r { text-align: right; }
-td.col-num { cursor: text; }
-.ci[type=number] { -moz-appearance: textfield; }
-.ci[type=number]::-webkit-inner-spin-button,
-.ci[type=number]::-webkit-outer-spin-button { display: none; }
-
-/* category select: цвет категории приходит через --cat */
-.cat-sel {
-  border: none; background: transparent;
-  font-size: 12px; font-weight: 700; font-family: inherit;
-  cursor: pointer; padding: 9px 8px; width: 100%;
-  -webkit-appearance: none; appearance: none;
-  color: var(--cat, var(--muted));
-  text-overflow: ellipsis;
-}
-.cat-sel:focus { outline: none; }
-.cat-sel option { color: var(--text); }
-
-/* remaining */
-.rem-cell { padding: 9px 12px; text-align: right; font-weight: 700; font-size: 13px; display: block; }
-.rem-pos  { color: var(--green); }
-.rem-neg  { color: var(--red); }
-.rem-zero { color: var(--muted); }
-
-/* delete btn */
-.del-btn {
-  display: block; margin: 0 auto;
-  background: none; border: none;
-  cursor: pointer; color: var(--muted);
-  font-size: 18px; width: 30px; height: 30px;
-  border-radius: 4px; line-height: 30px; text-align: center;
-  transition: color .12s, background .12s;
-}
-.del-btn:hover { color: var(--red); background: #fee2e2; }
-.del-btn:disabled { opacity: .3; cursor: default; }
-.del-btn:disabled:hover { color: var(--muted); background: none; }
-
-/* totals row */
-.totals-row td {
-  padding: 9px 12px; font-weight: 700; font-size: 13px;
-  background: #f8fafc; border-top: 2px solid var(--border);
-}
-.totals-row td.r { text-align: right; }
-
-/* add row */
-.add-row { padding: 10px 16px; border-top: 1px solid var(--border); }
-.add-btn {
-  width: 100%; padding: 7px 12px;
-  background: none; border: 1.5px dashed var(--border);
-  border-radius: 8px; cursor: pointer;
-  color: var(--muted); font-size: 13px; font-family: inherit;
-  transition: all .12s;
-}
-.add-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
-
-/* category filter tabs */
-.cat-tabs {
-  display: flex; gap: 6px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
-}
-.cat-tab {
-  padding: 4px 14px;
-  border-radius: 20px; font-size: 12px; font-weight: 700;
-  cursor: pointer; border: 1.5px solid var(--border);
-  background: none; color: var(--muted);
-  font-family: inherit; transition: all .12s;
-  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.cat-tab.active { background: var(--cat); border-color: var(--cat); color: #fff; }
-
-/* buttons */
-.btn-primary, .btn-secondary {
+/* ── Buttons ── */
+.btn-secondary {
   border-radius: 8px;
   padding: 10px 20px; font-size: 14px; font-weight: 700;
   cursor: pointer; font-family: inherit;
   transition: background .12s, border-color .12s;
+  background: var(--surface); color: var(--text); border: 1.5px solid var(--border);
 }
-.btn-primary { background: var(--blue); color: #fff; border: none; }
-.btn-primary:hover { background: #2563eb; }
-.btn-primary:disabled { background: var(--muted); cursor: default; }
-.btn-secondary { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
 .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
 .btn-sm { padding: 6px 14px; font-size: 13px; }
 .btn-link {
@@ -333,96 +60,8 @@ td.col-num { cursor: text; }
   cursor: pointer; text-decoration: underline; text-align: left;
 }
 
-.hidden { display: none !important; }
-
-/* ── Calendar popup ── */
-.cal-wrapper { position: relative; }
-.month-label-btn {
-  font-size: 15px; font-weight: 600; min-width: 190px;
-  background: none; border: 1px solid var(--border);
-  border-radius: 8px; padding: 4px 12px; cursor: pointer;
-  color: var(--text); font-family: inherit;
-  transition: background .12s;
-  display: flex; align-items: center; gap: 6px; justify-content: center;
-}
-.month-label-btn:hover { background: var(--bg); }
-.cal-drop-arrow { font-size: 10px; color: var(--muted); }
-.cal-popup {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%; transform: translateX(-50%);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.13);
-  padding: 12px; z-index: 200; min-width: 300px;
-}
-.cal-year-nav {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.cal-year-nav span { font-weight: 700; font-size: 15px; }
-.cal-year-btn {
-  background: none; border: 1px solid var(--border);
-  border-radius: 6px; width: 28px; height: 28px;
-  cursor: pointer; font-size: 15px; color: var(--text);
-  display: flex; align-items: center; justify-content: center;
-  transition: background .12s;
-}
-.cal-year-btn:hover { background: var(--bg); }
-.cal-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.cal-month { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; text-align: center; }
-.cal-month-name {
-  font-size: 11px; font-weight: 700; padding: 4px 2px 2px;
-  color: var(--muted); background: #f8fafc;
-  border-bottom: 1px solid var(--border);
-}
-.cal-halves { display: flex; }
-.cal-half {
-  flex: 1; padding: 5px 2px; font-size: 12px; font-weight: 700;
-  background: none; border: none; cursor: pointer;
-  color: var(--text); font-family: inherit;
-  transition: background .12s, color .12s;
-}
-.cal-half:first-child { border-right: 1px solid var(--border); }
-.cal-half:hover { background: var(--blue-light); color: var(--blue); }
-.cal-half.has-data { color: var(--blue); }
-.cal-half.is-current { background: var(--blue); color: #fff !important; }
-.cal-half.is-current:hover { background: #2563eb; }
-
-/* ── Modals ── */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.35);
-  display: flex; align-items: center; justify-content: center;
-  padding: 16px;
-}
+/* ── Settings ── */
 #settings-overlay { z-index: 450; }
-#confirm-overlay  { z-index: 500; }
-.confirm-box {
-  background: var(--surface); border-radius: 14px;
-  padding: 24px 28px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.18);
-  width: 100%; max-width: 380px; text-align: center;
-}
-.confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-.confirm-name { color: var(--muted); font-size: 13px; margin-bottom: 20px; min-height: 18px; line-height: 1.45; }
-.confirm-btns { display: flex; gap: 10px; justify-content: center; }
-.confirm-cancel {
-  padding: 9px 22px; border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: none; cursor: pointer; font-size: 14px; font-family: inherit;
-  font-weight: 600; color: var(--text); transition: background .12s;
-}
-.confirm-cancel:hover { background: var(--bg); }
-.confirm-ok {
-  padding: 9px 22px; border-radius: 8px; border: none;
-  background: var(--red); color: #fff; cursor: pointer;
-  font-size: 14px; font-family: inherit; font-weight: 700;
-  transition: background .12s;
-}
-.confirm-ok:hover { background: #dc2626; }
-
 .settings-box {
   background: var(--surface); border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0,0,0,.18);
@@ -458,61 +97,8 @@ td.col-num { cursor: text; }
 }
 .swatch.on { border-color: var(--text); }
 
-/* ── Backlog section ── */
-.backlog-header { cursor: pointer; user-select: none; }
-.backlog-header:hover { background: #fafafa; }
-.backlog-arrow { font-size: 11px; color: var(--muted); margin-right: 6px; }
-.col-move { width: 38px; }
-.move-btn {
-  display: block; margin: 0 auto;
-  background: none; border: none; cursor: pointer;
-  color: var(--green); font-size: 20px; font-weight: 700;
-  width: 30px; height: 30px;
-  border-radius: 4px; line-height: 30px; text-align: center;
-  transition: color .12s, background .12s;
-}
-.move-btn:hover { background: var(--green-light); }
-.move-btn:disabled { color: var(--muted); cursor: default; }
-.move-btn:disabled:hover { background: none; }
-.tobacklog-btn {
-  display: block; margin: 0 auto;
-  background: none; border: none; cursor: pointer;
-  color: var(--amber); font-size: 16px; font-weight: 700;
-  width: 30px; height: 30px;
-  border-radius: 4px; line-height: 30px; text-align: center;
-  transition: color .12s, background .12s;
-}
-.tobacklog-btn:hover { background: var(--amber-light); color: #d97706; }
-
-/* ── Mobile ── */
 @media (max-width: 640px) {
-  header { padding: 0 12px; gap: 6px; }
-  header h1 { display: none; }
-  main, #budget-view { gap: 14px; }
-  main { padding: 16px 10px 40px; }
-  .summary { grid-template-columns: repeat(2, 1fr); }
-  .s-card:last-child { grid-column: span 2; }
-  .income-grid { grid-template-columns: 1fr; }
-  .income-field { border-right: none; border-bottom: 1px solid var(--border); }
-  .income-field:last-child { border-bottom: none; }
-  .month-label-btn { min-width: 140px; font-size: 14px; padding: 4px 8px; }
-  .month-nav { gap: 6px; }
-
-  /* table: category as colored dot, fit columns to viewport */
-  table { table-layout: fixed; }
-  th.col-cat { font-size: 0; padding: 0; width: 40px; }
-  th.col-name { font-size: 0; }
-  td.col-cat { width: 40px; padding: 0; text-align: center; }
-  .cat-sel { width: 22px; height: 22px; border-radius: 50%; padding: 0; font-size: 0; border: none; cursor: pointer; display: inline-block; background: var(--cat, var(--muted)); }
-  .col-num { width: 56px; }
-  .col-del { width: 40px; }
-  th { padding: 7px 4px; }
-  td { padding: 0; }
-  td.col-del { padding: 0; position: relative; }
-  .del-btn { position: absolute; inset: 0; margin: 0; width: 100%; height: 100%; border-radius: 0; font-size: 20px; display: flex; align-items: center; justify-content: center; }
   .settings-sec .del-btn { position: static; width: 30px; height: 30px; }
-  .ci { padding: 11px 4px; font-size: 13px; }
-  .rem-cell { padding: 8px 4px; font-size: 12px; }
   .cat-row { flex-wrap: wrap; }
   .swatches { max-width: none; order: 3; width: 100%; }
 }
@@ -737,12 +323,10 @@ td.col-num { cursor: text; }
   </div><!-- /budget-view -->
 </main>
 
+<script src="../shared/core.js"></script>
 <script>
 // Local-first версия: сервера нет, всё лежит в IndexedDB этого браузера.
 // Защита от потери — резервные копии (файл JSON, автосохранение в файл).
-
-const MN = ['Январь','Февраль','Март','Апрель','Май','Июнь',
-            'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
 const COLORS = ['#3b82f6', '#10b981', '#ec4899', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#64748b'];
 const DEFAULT_CATS = [
@@ -753,42 +337,12 @@ const BACKUP_FORMAT = 1;
 const DAY = 24 * 60 * 60 * 1000;
 const STALE_BACKUP_MS = 3 * DAY;
 
-const _today = new Date().getDate();
-const state = {
-  year: new Date().getFullYear(),
-  month: new Date().getMonth() + 1,
-  half: (_today >= 10 && _today <= 24) ? 1 : 2,
-  monthId: null,
-  income: 0,
-  saved: 0,
-  entries: [],
-  allMonths: [],
-  catFilter: 'all',
-  prevMonthId: null,
-  backlog: [],
-};
-
-let cats = DEFAULT_CATS;
+coreConfig.copyPrevByDefault = true;
+cats = DEFAULT_CATS;
 const meta = { lastBackupAt: 0, lastChangeAt: 0, hasPreImport: false };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-const $ = id => document.getElementById(id);
-const fmt = n => Number(n || 0).toLocaleString('ru-RU') + ' ₽';
-const fmtAbs = n => Math.abs(n).toLocaleString('ru-RU') + ' ₽';
-const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-const isMobile = () => window.innerWidth <= 640;
-const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
-const fmtK = n => {
-  const abs = Math.abs(n || 0);
-  const sign = n < 0 ? '−' : '';
-  if (abs >= 1000) {
-    const k = abs / 1000;
-    const s = Number.isInteger(k) ? String(k) : k.toFixed(1).replace(/\.0$/, '');
-    return sign + s + 'К ₽';
-  }
-  return sign + abs + ' ₽';
-};
 const fmtDate = ts => new Date(ts).toLocaleString('ru-RU', {
   day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
 });
@@ -806,33 +360,6 @@ const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const fsSupported = 'showSaveFilePicker' in window;
-
-function enterBlur(e) { if (e.key === 'Enter') e.target.blur(); }
-
-function cellKeydown(e) {
-  if (e.key === 'Enter') { e.target.blur(); return; }
-  if (e.key !== 'Tab' || e.shiftKey) return;
-  const tbody = e.target.closest('tbody');
-  if (!tbody) return;
-  const lastRow = [...tbody.querySelectorAll('tr[data-eid]')].at(-1);
-  if (!lastRow || e.target.closest('tr') !== lastRow) return;
-  const focusables = [...lastRow.querySelectorAll('input, select')];
-  if (focusables.at(-1) !== e.target) return;
-  e.preventDefault();
-  addEntry(tbody.id === 'mandatory-body' ? 'mandatory' : 'planned');
-}
-
-// ── status indicator ─────────────────────────────────────────────────────────
-
-let syncTimer = null;
-function flash(text, isErr) {
-  const el = $('sync-dot');
-  el.textContent = text;
-  el.classList.toggle('err', !!isErr);
-  el.classList.add('show');
-  clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => el.classList.remove('show'), isErr ? 5000 : 900);
-}
 
 // ── IndexedDB ────────────────────────────────────────────────────────────────
 // Каждая операция из нескольких шагов (перенос в бэклог, копирование плана,
@@ -1056,8 +583,6 @@ async function requestPersist() {
 // ── вкладки: правка в одной — перечитывание в остальных ──────────────────────
 
 let reloadQueued = false;
-const isEditing = () =>
-  !!document.activeElement && document.activeElement.matches('main input, main select');
 
 function queueReload() {
   if (isEditing()) { reloadQueued = true; return; }
@@ -1074,19 +599,6 @@ document.addEventListener('focusout', () => {
   }, 150);
 });
 
-// ── navigation ───────────────────────────────────────────────────────────────
-
-function shiftMonth(dir) {
-  if (dir > 0) {
-    if (state.half === 1) { state.half = 2; }
-    else { state.half = 1; state.month++; if (state.month > 12) { state.month = 1; state.year++; } }
-  } else {
-    if (state.half === 2) { state.half = 1; }
-    else { state.half = 2; state.month--; if (state.month < 1) { state.month = 12; state.year--; } }
-  }
-  loadCurrentMonth();
-}
-
 // ── init / load ───────────────────────────────────────────────────────────────
 
 async function loadMeta() {
@@ -1101,472 +613,13 @@ async function loadMeta() {
 
 async function init() {
   await loadMeta();
-  if (state.catFilter !== 'all' && !cats.some(c => c.id === state.catFilter)) state.catFilter = 'all';
-  const [months, backlog] = await Promise.all([api.listMonths(), api.listBacklog()]);
-  state.allMonths = months;
-  state.backlog = backlog;
-  renderTabs();
-  await loadCurrentMonth();
+  await loadAll();
   renderBanner();
   if (!$('settings-overlay').classList.contains('hidden')) renderSettings();
 }
 
-let loadToken = 0;
-async function loadCurrentMonth() {
-  const token = ++loadToken;
-  const { year, month, half } = state;
-  $('month-label-text').textContent = `${MN[month-1]} ${year} · ${half === 1 ? '1-я пол.' : '2-я пол.'}`;
-
-  const found = state.allMonths.find(m => m.year === year && m.month === month && m.half === half);
-
-  if (!found) {
-    const prev = findPrev(year, month, half);
-    state.prevMonthId = prev ? prev.id : null;
-    $('empty-title').textContent = `Бюджет на ${MN[month-1].toLowerCase()} ${year} (${half === 1 ? '1-я пол.' : '2-я пол.'}) не создан`;
-    $('copy-option').style.display = prev ? 'flex' : 'none';
-    $('copy-cb').checked = !!prev;
-    $('empty-state').classList.remove('hidden');
-    $('budget-view').classList.add('hidden');
-    state.monthId = null; state.entries = [];
-    renderBacklog();
-    return;
-  }
-
-  const data = await api.getMonth(found.id);
-  if (token !== loadToken) return; // пока читали, пользователь переключил период
-
-  $('empty-state').classList.add('hidden');
-  $('budget-view').classList.remove('hidden');
-
-  state.monthId = found.id;
-  state.income  = data.month.income;
-  state.saved   = data.month.saved;
-  state.entries = data.entries;
-
-  $('income-inp').value = state.income || '';
-  $('saved-inp').value  = state.saved  || '';
-
-  renderAll();
-  renderBacklog();
-}
-
-function findPrev(year, month, half) {
-  let py = year, pm = month, ph = half - 1;
-  if (ph < 1) { ph = 2; pm--; if (pm < 1) { pm = 12; py--; } }
-  return state.allMonths.find(m => m.year === py && m.month === pm && m.half === ph) || null;
-}
-
-// ── create month ─────────────────────────────────────────────────────────────
-
-async function createCurrentMonth() {
-  const copyId = $('copy-cb').checked ? state.prevMonthId : null;
-  const res = await api.createMonth(state.year, state.month, state.half, copyId);
-  if (res.error) { await init(); return; }
-  state.allMonths.push(res);
-  loadCurrentMonth();
-}
-
-// ── save income / saved ───────────────────────────────────────────────────────
-
-async function saveMonthFields() {
-  if (!state.monthId) return;
-  const income = num($('income-inp').value);
-  const saved  = num($('saved-inp').value);
-  if (income === state.income && saved === state.saved) return;
-  state.income = income; state.saved = saved;
-  await api.updateMonth(state.monthId, { income, saved });
-  flash('Сохранено');
-  renderSummary();
-}
-
-// ── categories ────────────────────────────────────────────────────────────────
-
-const catById = id => cats.find(c => c.id === id);
-const catColor = id => (catById(id) || {}).color || '#94a3b8';
-const defaultCat = () => cats[cats.length - 1].id;
-
-function catSelect(cat, handler) {
-  const opts = (catById(cat) ? '' : `<option value="${esc(cat)}" selected>—</option>`)
-    + cats.map(c => `<option value="${c.id}" ${c.id === cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
-  return `<select class="cat-sel" style="--cat:${catColor(cat)}" onchange="${handler}">${opts}</select>`;
-}
-
-function paintSelect(sel) { sel.style.setProperty('--cat', catColor(sel.value)); }
-
-function filterCat(cat) {
-  state.catFilter = cat;
-  renderTabs();
-  renderPlanned();
-}
-
-function renderTabs() {
-  const tabs = [{ id: 'all', name: 'Все', color: 'var(--text)' }, ...cats];
-  $('cat-tabs').innerHTML = tabs.map(c => `
-    <button class="cat-tab ${state.catFilter === c.id ? 'active' : ''}" style="--cat:${c.color}"
-      onclick="filterCat('${c.id}')">${esc(c.name)}</button>`).join('');
-}
-
-// ── render ────────────────────────────────────────────────────────────────────
-
-function renderAll() { renderSummary(); renderMandatory(); renderPlanned(); }
-
-function renderSummary() {
-  const mandatory = state.entries.filter(e => e.type === 'mandatory').reduce((s, e) => s + e.planned, 0);
-  const spent     = state.entries.filter(e => e.type === 'planned').reduce((s, e) => s + e.actual, 0);
-  const remain    = state.income - mandatory - spent - state.saved;
-
-  $('s-income').textContent    = fmt(state.income);
-  $('s-mandatory').textContent = fmt(mandatory);
-  $('s-spent').textContent     = fmt(spent);
-  $('s-saved').textContent     = fmt(state.saved);
-  $('s-remain').textContent    = (remain < 0 ? '−' : '') + fmtAbs(remain);
-
-  $('s-remain-card').classList.toggle('red-accent', remain < 0);
-}
-
-function renderMandatory() {
-  const rows = state.entries.filter(e => e.type === 'mandatory');
-  const total = rows.reduce((s, e) => s + e.planned, 0);
-  $('mandatory-total').textContent = rows.length ? fmt(total) : '';
-
-  $('mandatory-body').innerHTML = rows.map(e => `
-    <tr data-eid="${e.id}">
-      <td class="col-cat">${catSelect(e.category, `onCatChange('${e.id}',this)`)}</td>
-      <td class="col-name">
-        <input class="ci" type="text" value="${esc(e.name)}" placeholder="Название"
-          onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
-      </td>
-      <td class="col-num" onclick="this.querySelector('input')?.focus()">
-        <input class="ci r" type="number" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
-          data-field="planned" onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
-      </td>
-      <td class="col-del"><button class="del-btn" tabindex="-1" onclick="deleteEntry('${e.id}')">×</button></td>
-    </tr>
-  `).join('');
-}
-
-function plannedTotals() {
-  const all      = state.entries.filter(e => e.type === 'planned');
-  const filtered = state.catFilter === 'all' ? all : all.filter(e => e.category === state.catFilter);
-  const totPlan   = filtered.reduce((s, e) => s + e.planned, 0);
-  const totActual = filtered.reduce((s, e) => s + e.actual, 0);
-  return { filtered, totPlan, totActual, totRem: totPlan - totActual };
-}
-
-function remInfo(e) {
-  const rem = e.planned - e.actual;
-  return {
-    cls: rem > 0 ? 'rem-pos' : rem < 0 ? 'rem-neg' : 'rem-zero',
-    text: e.planned > 0 ? ((rem < 0 ? '−' : '') + fmtAbs(rem)) : '—',
-  };
-}
-
-function renderPlannedTotals() {
-  const { filtered, totPlan, totActual, totRem } = plannedTotals();
-  $('planned-total').textContent = filtered.length ? `${fmt(totActual)} из ${fmt(totPlan)}` : '';
-  const foot = $('planned-foot');
-  if (filtered.length > 1) {
-    const cls = totRem >= 0 ? 'rem-pos' : 'rem-neg';
-    const f = isMobile() ? fmtK : fmt;
-    const fA = isMobile() ? n => fmtK(Math.abs(n)) : fmtAbs;
-    foot.innerHTML = `
-      <tr class="totals-row">
-        <td colspan="2">Итого (${filtered.length})</td>
-        <td class="r">${f(totPlan)}</td>
-        <td class="r">${f(totActual)}</td>
-        <td class="r ${cls}">${(totRem < 0 ? '−' : '') + fA(totRem)}</td>
-        <td></td><td></td>
-      </tr>`;
-  } else {
-    foot.innerHTML = '';
-  }
-}
-
-function renderPlanned() {
-  const { filtered } = plannedTotals();
-  $('planned-body').innerHTML = filtered.map(e => {
-    const r = remInfo(e);
-    return `
-    <tr data-eid="${e.id}">
-      <td class="col-cat">${catSelect(e.category, `onCatChange('${e.id}',this)`)}</td>
-      <td class="col-name">
-        <input class="ci" type="text" value="${esc(e.name)}" placeholder="Название"
-          onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
-      </td>
-      <td class="col-num" onclick="this.querySelector('input')?.focus()">
-        <input class="ci r" type="number" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
-          data-field="planned" onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
-      </td>
-      <td class="col-num" onclick="this.querySelector('input')?.focus()">
-        <input class="ci r" type="number" inputmode="decimal" value="${e.actual || ''}" placeholder="0"
-          data-field="actual" onblur="saveEntry('${e.id}')" onkeydown="cellKeydown(event)">
-      </td>
-      <td class="col-num"><span class="rem-cell ${r.cls}">${r.text}</span></td>
-      <td class="col-move"><button class="tobacklog-btn" tabindex="-1" title="В бэклог" onclick="entryToBacklog('${e.id}')">↓</button></td>
-      <td class="col-del"><button class="del-btn" tabindex="-1" onclick="deleteEntry('${e.id}')">×</button></td>
-    </tr>`;
-  }).join('');
-  renderPlannedTotals();
-}
-
-// ── entry CRUD ────────────────────────────────────────────────────────────────
-
-function getRowValues(eid) {
-  const row = document.querySelector(`tr[data-eid="${eid}"]`);
-  const entry = state.entries.find(e => e.id === eid);
-  if (!row || !entry) return null;
-  const data = { ...entry };
-  const nameInp = row.querySelector('input[type=text]');
-  if (nameInp) data.name = nameInp.value;
-  row.querySelectorAll('input[type=number]').forEach(inp => {
-    data[inp.dataset.field] = num(inp.value);
-  });
-  const sel = row.querySelector('select');
-  if (sel) data.category = sel.value;
-  return data;
-}
-
-async function saveEntry(eid) {
-  const d = getRowValues(eid);
-  if (!d) return;
-  const idx = state.entries.findIndex(e => e.id === eid);
-  const cur = state.entries[idx];
-  const patch = { category: d.category, name: d.name, planned: d.planned || 0, actual: d.actual || 0 };
-  if (Object.keys(patch).every(k => cur[k] === patch[k])) return;
-  await api.updateEntry(eid, patch);
-  state.entries[idx] = { ...cur, ...patch };
-  renderSummary();
-  if (d.type === 'mandatory') {
-    const total = state.entries.filter(e => e.type === 'mandatory').reduce((s, e) => s + e.planned, 0);
-    $('mandatory-total').textContent = fmt(total);
-  } else {
-    patchPlannedRow(eid);
-  }
-}
-
-function patchPlannedRow(eid) {
-  const entry = state.entries.find(e => e.id === eid);
-  if (!entry) return;
-  const span = document.querySelector(`tr[data-eid="${eid}"] .rem-cell`);
-  if (span) {
-    const r = remInfo(entry);
-    span.className = `rem-cell ${r.cls}`;
-    span.textContent = r.text;
-  }
-  renderPlannedTotals();
-}
-
-async function onCatChange(eid, sel) {
-  paintSelect(sel);
-  const entry = state.entries.find(e => e.id === eid);
-  if (!entry) return;
-  await api.updateEntry(eid, { category: sel.value });
-  entry.category = sel.value;
-  if (entry.type === 'planned' && state.catFilter !== 'all') renderPlanned();
-  else if (entry.type === 'planned') renderPlannedTotals();
-}
-
-function deleteEntry(eid) {
-  const entry = state.entries.find(e => e.id === eid);
-  openConfirm('Удалить запись?', entry && entry.name ? `«${entry.name}»` : '', 'Удалить', async () => {
-    await api.deleteEntry(eid);
-    state.entries = state.entries.filter(e => e.id !== eid);
-    renderAll();
-  });
-}
-
-async function addEntry(type) {
-  if (!state.monthId) return;
-  const cat = (state.catFilter !== 'all' && type === 'planned') ? state.catFilter : defaultCat();
-  const entry = await api.createEntry({
-    month_id: state.monthId, type, category: cat, name: '', planned: 0, actual: 0,
-  });
-  state.entries.push(entry);
-  if (type === 'mandatory') renderMandatory();
-  else renderPlanned();
-  const input = document.querySelector(`tr[data-eid="${entry.id}"] input[type=text]`);
-  if (input) input.focus();
-}
-
-async function entryToBacklog(eid) {
-  const item = await api.entryToBacklog(eid);
-  state.entries = state.entries.filter(e => e.id !== eid);
-  state.backlog.push(item);
-  renderPlanned();
-  renderSummary();
-  renderBacklog();
-  flash('Перенесено в бэклог');
-}
-
-// ── calendar ─────────────────────────────────────────────────────────────────
-
-let calYear = new Date().getFullYear();
-let calOpen = false;
-
-function toggleCalendar(e) {
-  e.stopPropagation();
-  calOpen = !calOpen;
-  if (calOpen) {
-    calYear = state.year;
-    renderCalendar();
-    $('cal-popup').classList.remove('hidden');
-  } else {
-    $('cal-popup').classList.add('hidden');
-  }
-}
-
-document.addEventListener('click', e => {
-  if (calOpen && !e.target.closest('.cal-wrapper')) {
-    calOpen = false;
-    $('cal-popup').classList.add('hidden');
-  }
-});
-
-function calPickYear(dir) {
-  calYear += dir;
-  renderCalendar();
-}
-
-function renderCalendar() {
-  $('cal-year-display').textContent = calYear;
-  const short = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
-  $('cal-months-grid').innerHTML = short.map((mn, i) => {
-    const m = i + 1;
-    const has = h => state.allMonths.some(x => x.year === calYear && x.month === m && x.half === h);
-    const cur = h => state.year === calYear && state.month === m && state.half === h;
-    const btn = h => `<button class="cal-half ${has(h) ? 'has-data' : ''} ${cur(h) ? 'is-current' : ''}"
-          onclick="pickPeriod(${calYear},${m},${h})">${h}</button>`;
-    return `<div class="cal-month">
-      <div class="cal-month-name">${mn}</div>
-      <div class="cal-halves">${btn(1)}${btn(2)}</div>
-    </div>`;
-  }).join('');
-}
-
-function pickPeriod(y, m, h) {
-  state.year = y; state.month = m; state.half = h;
-  calOpen = false;
-  $('cal-popup').classList.add('hidden');
-  loadCurrentMonth();
-}
-
-// ── confirm modal ─────────────────────────────────────────────────────────────
-
-let confirmCallback = null;
-
-function openConfirm(title, text, okLabel, callback) {
-  confirmCallback = callback;
-  $('confirm-title').textContent = title;
-  $('confirm-name').textContent = text || '';
-  $('confirm-ok').textContent = okLabel;
-  $('confirm-overlay').classList.remove('hidden');
-}
-
-function closeConfirm() {
-  $('confirm-overlay').classList.add('hidden');
-  confirmCallback = null;
-}
-
-function execConfirm() {
-  const cb = confirmCallback;
-  closeConfirm();
-  if (cb) cb();
-}
-
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  if (!$('confirm-overlay').classList.contains('hidden')) closeConfirm();
-  else if (!$('settings-overlay').classList.contains('hidden')) closeSettings();
-});
-
-// ── backlog ───────────────────────────────────────────────────────────────────
-
-let backlogOpen = false;
-
-function toggleBacklog() {
-  backlogOpen = !backlogOpen;
-  $('backlog-content').classList.toggle('hidden', !backlogOpen);
-  $('backlog-arrow').textContent = backlogOpen ? '▾' : '▸';
-}
-
-function renderBacklogTotal() {
-  $('backlog-total').textContent = state.backlog.length
-    ? fmt(state.backlog.reduce((s, b) => s + b.planned, 0)) : '';
-}
-
-function renderBacklog() {
-  renderBacklogTotal();
-  $('backlog-body').innerHTML = state.backlog.map(b => `
-    <tr data-bid="${b.id}">
-      <td class="col-cat">${catSelect(b.category, `onBacklogCatChange('${b.id}',this)`)}</td>
-      <td class="col-name">
-        <input class="ci" type="text" value="${esc(b.name)}" placeholder="Название"
-          onblur="saveBacklogEntry('${b.id}')" onkeydown="enterBlur(event)">
-      </td>
-      <td class="col-num" onclick="this.querySelector('input')?.focus()">
-        <input class="ci r" type="number" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
-          onblur="saveBacklogEntry('${b.id}')" onkeydown="enterBlur(event)">
-      </td>
-      <td class="col-move">
-        <button class="move-btn" tabindex="-1" title="Перенести в планируемые"
-          onclick="moveBacklogEntry('${b.id}')" ${!state.monthId ? 'disabled' : ''}>+</button>
-      </td>
-      <td class="col-del">
-        <button class="del-btn" tabindex="-1" onclick="deleteBacklogEntry('${b.id}')">×</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-async function onBacklogCatChange(bid, sel) {
-  paintSelect(sel);
-  const item = state.backlog.find(b => b.id === bid);
-  if (!item) return;
-  await api.updateBacklog(bid, { category: sel.value });
-  item.category = sel.value;
-}
-
-async function saveBacklogEntry(bid) {
-  const row = document.querySelector(`tr[data-bid="${bid}"]`);
-  const item = state.backlog.find(b => b.id === bid);
-  if (!row || !item) return;
-  const patch = {
-    name: row.querySelector('input[type=text]').value,
-    planned: num(row.querySelector('input[type=number]').value),
-  };
-  if (patch.name === item.name && patch.planned === item.planned) return;
-  await api.updateBacklog(bid, patch);
-  Object.assign(item, patch);
-  renderBacklogTotal();
-}
-
-async function addBacklogEntry() {
-  const item = await api.createBacklog({ category: defaultCat(), name: '', planned: 0 });
-  state.backlog.push(item);
-  if (!backlogOpen) toggleBacklog();
-  renderBacklog();
-  const input = document.querySelector(`tr[data-bid="${item.id}"] input[type=text]`);
-  if (input) input.focus();
-}
-
-function deleteBacklogEntry(bid) {
-  const item = state.backlog.find(b => b.id === bid);
-  openConfirm('Удалить запись?', item && item.name ? `«${item.name}»` : '', 'Удалить', async () => {
-    await api.deleteBacklog(bid);
-    state.backlog = state.backlog.filter(b => b.id !== bid);
-    renderBacklog();
-  });
-}
-
-async function moveBacklogEntry(bid) {
-  if (!state.monthId) return;
-  const entry = await api.backlogToEntry(bid, state.monthId);
-  state.backlog = state.backlog.filter(b => b.id !== bid);
-  state.entries.push(entry);
-  renderBacklog();
-  renderPlanned();
-  renderSummary();
-  flash('Перенесено в планируемые');
+function onEscape() {
+  if (!$('settings-overlay').classList.contains('hidden')) closeSettings();
 }
 
 // ── backup: export / import ──────────────────────────────────────────────────

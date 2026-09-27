@@ -1,7 +1,7 @@
 // Network-first: свежая версия при наличии сети, кэш — только для офлайна.
 // Данные пользователя здесь не хранятся, они в IndexedDB.
-const CACHE = 'budget-free-v1';
-const SHELL = ['./', 'manifest.webmanifest', '../icon-192.png', '../icon-512.png'];
+const CACHE = 'budget-free-v2';
+const SHELL = ['./', 'manifest.webmanifest', '../shared/core.js', '../shared/core.css', '../icon-192.png', '../icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
