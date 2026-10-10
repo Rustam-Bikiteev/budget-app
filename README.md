@@ -16,19 +16,29 @@
 
 ```
 index.html             — версия с Supabase: разметка, хранилище, вход, realtime
+app.js / app.css       — свой интерфейс версии с Supabase поверх shared/ (сводка «Свободно»,
+                         кошельки «Я + Общие» и «Насте», оплата обязательных, свайпы)
 shared/core.js         — общая логика обеих версий (расчёты, отрисовка, календарь, бэклог)
 shared/core.css        — общий интерфейс обеих версий
 manifest.webmanifest   — PWA-манифест
 icon-192.png / icon-512.png
 supabase_setup.sql     — включение RLS и политик (выполнить один раз)
+supabase_add_transferred.sql — колонка months.transferred для отметки перевода Насте
 ```
+
+`app.js` подключается после `shared/core.js` и объявляет функции с теми же именами
+(`renderSummary`, `renderPlanned`, `saveEntry`...): core вызывает их по имени, поэтому
+работает версия из `app.js`. `free/` подключает только `shared/` и этого не видит.
+
+Период = спринт между выплатами: 1-я половина месяца — 10–24, 2-я — с 25-го по 9-е
+следующего месяца. С 1 по 9 число открывается 2-я половина прошлого месяца.
 
 ## Схема данных
 
 | Таблица   | Назначение |
 |-----------|------------|
-| `months`  | период (year / month / half), `income`, `saved` |
-| `entries` | строки периода: `type` = `mandatory` / `planned`, `category` = `me` / `nastya` / `shared` |
+| `months`  | период (year / month / half), `income`, `saved` (цель отложить), `transferred` (сколько переведено Насте, null — не переводил) |
+| `entries` | строки периода: `type` = `mandatory` / `planned`, `category` = `me` / `nastya` / `shared`. У обязательных `actual >= planned` = оплачено |
 | `backlog` | отложенные траты вне периода |
 
 ## Общедоступная версия (`free/`)

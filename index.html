@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="shared/core.css">
+<link rel="stylesheet" href="app.css">
 <style>
 /* своё у версии с Supabase; общий интерфейс в shared/core.css */
 .logout-btn, .refresh-btn {
@@ -77,8 +78,8 @@
   <div class="month-nav">
     <button class="nav-btn" onclick="shiftMonth(-1)">‹</button>
     <div class="cal-wrapper">
-      <button id="month-label" class="month-label-btn" onclick="toggleCalendar(event)">
-        <span id="month-label-text"></span>
+      <button id="month-label" class="month-label-btn period" onclick="toggleCalendar(event)">
+        <span class="period-text"><b id="month-label-text"></b><span id="period-sub"></span></span>
         <span class="cal-drop-arrow">▾</span>
       </button>
       <div id="cal-popup" class="cal-popup hidden">
@@ -94,7 +95,7 @@
   </div>
   <div class="header-actions">
     <button class="refresh-btn" id="refresh-btn" title="Обновить данные" onclick="refreshData()"><span>⟳</span></button>
-    <button class="logout-btn" title="Выйти" onclick="doLogout()">⏻</button>
+    <button class="logout-btn" title="Выйти" onclick="confirmLogout()">⏻</button>
   </div>
 </header>
 
@@ -110,14 +111,30 @@
   </div>
 </div>
 
+<!-- Потратил вне плана -->
+<div id="sheet-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeQuick()">
+  <form class="sheet" onsubmit="saveQuick(event)">
+    <h3>Потратил вне плана</h3>
+    <input id="q-sum" inputmode="tel" placeholder="Сумма, ₽" autocomplete="off">
+    <input id="q-name" type="text" placeholder="На что (например, Аптека)" list="q-names" autocomplete="off">
+    <datalist id="q-names"></datalist>
+    <div class="who" id="q-who"></div>
+    <p>Если название совпадёт со строкой той же категории, сумма прибавится к её факту. Иначе появится новая строка с пометкой «вне плана».</p>
+    <div class="confirm-btns">
+      <button type="button" class="confirm-cancel" onclick="closeQuick()">Отмена</button>
+      <button type="submit" class="confirm-ok">Записать</button>
+    </div>
+  </form>
+</div>
+
 <main>
 
   <!-- Empty state -->
   <div id="empty-state" class="empty-state hidden">
     <h2 id="empty-title"></h2>
-    <p>Данных пока нет — создай бюджет для этого месяца</p>
+    <p>Данных пока нет: создай бюджет на этот спринт</p>
     <label class="copy-option" id="copy-option" style="display:none">
-      <input type="checkbox" id="copy-cb"> Скопировать план из предыдущего месяца
+      <input type="checkbox" id="copy-cb"> Скопировать план из предыдущего спринта
     </label>
     <button class="btn-primary" onclick="createCurrentMonth()">Создать бюджет</button>
   </div>
@@ -125,133 +142,125 @@
   <!-- Budget view -->
   <div id="budget-view" class="hidden">
 
-    <!-- Summary -->
-    <div class="summary">
-      <div class="s-card">
-        <div class="s-card-label">Получено</div>
-        <div class="s-card-val" id="s-income">0 ₽</div>
+    <!-- Главная цифра -->
+    <div class="section hero">
+      <div class="hero-top">
+        <div>
+          <div class="lbl">Свободно</div>
+          <div class="hero-val" id="h-free"></div>
+          <div class="hero-cap">не распределено ни по одному плану: можно запланировать или отложить</div>
+        </div>
+        <div class="hero-side">
+          <div class="lbl">Прогноз накоплений</div>
+          <div class="v" id="h-forecast"></div>
+          <div class="hero-cap">отложить + свободно</div>
+        </div>
       </div>
-      <div class="s-card">
-        <div class="s-card-label">Обязательные</div>
-        <div class="s-card-val" id="s-mandatory">0 ₽</div>
-      </div>
-      <div class="s-card">
-        <div class="s-card-label">Потрачено</div>
-        <div class="s-card-val" id="s-spent">0 ₽</div>
-      </div>
-      <div class="s-card">
-        <div class="s-card-label">Отложено</div>
-        <div class="s-card-val" id="s-saved">0 ₽</div>
-      </div>
-      <div class="s-card accent" id="s-remain-card">
-        <div class="s-card-label">Остаток</div>
-        <div class="s-card-val" id="s-remain">0 ₽</div>
+      <div class="bar" id="h-bar"></div>
+      <div class="legend" id="h-legend"></div>
+      <button class="formula-btn" onclick="toggleFormula()"><span id="f-arrow">▸</span> Как считается · доход и отложить</button>
+      <div class="formula hidden" id="formula">
+        <div class="f-row"><span>Доход спринта</span>
+          <input class="edit-num" type="number" inputmode="decimal" id="income-inp" placeholder="0"
+            onblur="saveMonthFields()" onkeydown="enterBlur(event)"></div>
+        <div class="f-row"><span class="n">− Обязательные<small id="f-mand-sub"></small></span><b id="f-mand"></b></div>
+        <div class="f-row"><span class="n">− Отложить</span>
+          <input class="edit-num" type="number" inputmode="decimal" id="saved-inp" placeholder="0"
+            onblur="saveMonthFields()" onkeydown="enterBlur(event)"></div>
+        <div class="f-row sum"><span>= На жизнь</span><span id="f-life"></span></div>
+        <div class="f-row"><span class="n">− Распределено по планам<small id="f-alloc-sub"></small></span><b id="f-alloc"></b></div>
+        <div class="f-row sum"><span>= Свободно</span><span id="f-free"></span></div>
       </div>
     </div>
 
-    <!-- Income & Savings -->
-    <div class="section">
-      <div class="section-header">
-        <h2>Доходы и накопления</h2>
+    <!-- Кошельки -->
+    <div class="pockets">
+      <div class="section pocket">
+        <div class="pocket-title">
+          <span class="dot" style="background:var(--c-me)"></span><span class="dot" style="background:var(--c-shared);margin-left:-4px"></span>
+          Мой кошелёк · Я + Общие
+        </div>
+        <div class="big" id="p-me-left"></div>
+        <div class="cap" id="p-me-cap"></div>
+        <div class="pbar"><div id="p-me-bar"></div></div>
+        <div class="p-row"><span>Потрачено</span><b id="p-me-spent"></b></div>
+        <div class="p-row"><span>Запланировано</span><b id="p-me-plan"></b></div>
+        <div class="p-row"><span>Лимит на спринт</span>
+          <input class="edit-num limit-inp" type="number" inputmode="decimal" id="p-me-limit"
+            onchange="setMyLimit(this.value)" onkeydown="enterBlur(event)"></div>
       </div>
-      <div class="income-grid">
-        <div class="income-field">
-          <label>Получено в этом месяце</label>
-          <input type="number" inputmode="decimal" id="income-inp" placeholder="0 ₽"
-            onblur="saveMonthFields()" onkeydown="enterBlur(event)">
-        </div>
-        <div class="income-field">
-          <label>Отложено в этом месяце</label>
-          <input type="number" inputmode="decimal" id="saved-inp" placeholder="0 ₽"
-            onblur="saveMonthFields()" onkeydown="enterBlur(event)">
-        </div>
+      <div class="section pocket">
+        <div class="pocket-title"><span class="dot" style="background:var(--c-nastya)"></span> Насте</div>
+        <div class="big" id="p-n-sum"></div>
+        <div class="cap">план в её категории: переводишь ей, дальше тратит сама</div>
+        <div class="pbar"><div id="p-n-bar" style="background:var(--c-nastya)"></div></div>
+        <div class="p-row"><span>Лимит на спринт</span><b id="p-n-limit"></b></div>
+        <div id="p-n-warn"></div>
+        <button class="transfer-btn hidden" id="p-n-btn" onclick="toggleTransfer()"></button>
       </div>
     </div>
 
-    <!-- Mandatory -->
+    <!-- Обязательные -->
     <div class="section">
       <div class="section-header">
         <h2>Обязательные платежи</h2>
-        <span class="section-total" id="mandatory-total"></span>
+        <span class="sub" id="mandatory-total"></span>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th class="col-cat">Категория</th>
-            <th class="col-name">Название</th>
-            <th class="r col-num">Сумма</th>
-            <th class="col-del"></th>
-          </tr>
-        </thead>
-        <tbody id="mandatory-body"></tbody>
-      </table>
+      <div class="thead r-mand"><div>Опл.</div><div></div><div>Название</div><div class="r">Сумма</div><div></div></div>
+      <div id="mandatory-body"></div>
       <div class="add-row">
         <button class="add-btn" onclick="addEntry('mandatory')">+ Добавить платёж</button>
       </div>
     </div>
 
-    <!-- Backlog -->
-    <div class="section">
-      <div class="section-header backlog-header" onclick="toggleBacklog()">
-        <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Бэклог</h2>
-        <span class="section-total" id="backlog-total"></span>
-      </div>
-      <div id="backlog-content" class="hidden">
-        <table>
-          <thead>
-            <tr>
-              <th class="col-cat">Категория</th>
-              <th class="col-name">Название</th>
-              <th class="r col-num">Сумма</th>
-              <th class="col-move"></th>
-              <th class="col-del"></th>
-            </tr>
-          </thead>
-          <tbody id="backlog-body"></tbody>
-        </table>
-        <div class="add-row">
-          <button class="add-btn" onclick="addBacklogEntry()">+ Добавить в бэклог</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Planned -->
+    <!-- Траты спринта -->
     <div class="section">
       <div class="section-header">
-        <h2>Планируемые траты</h2>
-        <span class="section-total" id="planned-total"></span>
+        <h2>Траты спринта</h2>
+        <span class="sub" id="planned-total"></span>
       </div>
       <div class="cat-tabs" id="cat-tabs"></div>
-      <table>
-        <thead>
-          <tr>
-            <th class="col-cat">Категория</th>
-            <th class="col-name">Название</th>
-            <th class="r col-num">План</th>
-            <th class="r col-num">Факт</th>
-            <th class="r col-num">Осталось</th>
-            <th class="col-move"></th>
-            <th class="col-del"></th>
-          </tr>
-        </thead>
-        <tbody id="planned-body"></tbody>
-        <tfoot id="planned-foot"></tfoot>
-      </table>
-      <div class="add-row">
-        <button class="add-btn" onclick="addEntry('planned')">+ Добавить трату</button>
+      <div class="thead r-plan"><div></div><div>Название</div><div class="r">План</div><div class="r">Факт</div><div class="r">Осталось</div><div></div><div></div></div>
+      <div id="planned-body"></div>
+      <div class="tfoot r-plan hidden" id="planned-foot"></div>
+      <div class="hint">
+        В «Факт» можно писать <code>1200+800</code> или <code>+500</code> (прибавится к текущему).
+        <span class="desk">Строку можно утащить мышкой влево: «В бэклог» и «Удалить».</span>
+        <span class="mob">Свайп влево по строке: «В бэклог» и «Удалить».</span>
+      </div>
+      <div class="add-row split">
+        <button class="add-btn" onclick="addEntry('planned')">+ Запланировать</button>
+        <button class="add-btn quick" onclick="openQuick()">⚡ Потратил вне плана</button>
       </div>
     </div>
 
   </div><!-- /budget-view -->
+
+  <!-- Бэклог: общий для всех спринтов, виден и на пустом спринте -->
+  <div class="section">
+    <div class="section-header backlog-header" onclick="toggleBacklog()">
+      <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Бэклог <span class="sub">· общий, не привязан к спринту</span></h2>
+      <span class="sub" id="backlog-total"></span>
+    </div>
+    <div id="backlog-content" class="hidden">
+      <div class="thead r-back"><div></div><div>Название</div><div class="r">Сумма</div><div></div><div></div></div>
+      <div id="backlog-body"></div>
+      <div class="add-row">
+        <button class="add-btn" onclick="addBacklogEntry()">+ Добавить в бэклог</button>
+      </div>
+    </div>
+  </div>
 </main>
 
 </div><!-- /app -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="shared/core.js"></script>
+<script src="app.js"></script>
 <script>
 // Версия с Supabase: общий бюджет с Настей, живая синхронизация между телефонами.
-// Интерфейс и расчёты — в shared/core.js, здесь только хранилище, вход и realtime.
+// Общее с free/ — в shared/core.js, свой интерфейс поверх него — в app.js,
+// здесь только хранилище, вход и realtime.
 
 // ── Supabase ─────────────────────────────────────────────────────────────────
 // anon/publishable key публичен по замыслу — доступ режет RLS (см. supabase_setup.sql)
