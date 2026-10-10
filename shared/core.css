@@ -97,7 +97,7 @@ main {
 /* ── Summary cards ── */
 .summary {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
 }
 .s-card {
@@ -124,6 +124,8 @@ main {
 .s-card.accent .s-card-label { color: rgba(255,255,255,.65); }
 .s-card.accent .s-card-val  { color: #fff; }
 .s-card.accent.red-accent { background: var(--red); }
+.s-card.allowed .s-card-val { color: var(--blue); }
+.s-card.allowed.negative .s-card-val { color: var(--red); }
 
 /* ── Section ── */
 .section {
@@ -407,7 +409,6 @@ td.col-num { cursor: text; }
   main, #budget-view { gap: 14px; }
   main { padding: 16px 10px 40px; }
   .summary { grid-template-columns: repeat(2, 1fr); }
-  .s-card:last-child { grid-column: span 2; }
   .income-grid { grid-template-columns: 1fr; }
   .income-field { border-right: none; border-bottom: 1px solid var(--border); }
   .income-field:last-child { border-bottom: none; }
