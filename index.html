@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Бюджет</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#3b82f6">
@@ -107,6 +107,37 @@
     <div class="confirm-btns">
       <button class="confirm-cancel" onclick="closeConfirm()">Отмена</button>
       <button class="confirm-ok" id="confirm-ok" onclick="execConfirm()"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Цифровая панель для сумм (телефон) -->
+<div id="pad-overlay" class="modal-overlay pad-overlay hidden" onclick="if (event.target === this) closePad()">
+  <div class="pad">
+    <div class="pad-head">
+      <b id="pad-title"></b>
+      <div class="pad-tabs" id="pad-tabs"></div>
+    </div>
+    <div class="pad-display" id="pad-display"></div>
+    <div class="pad-preview" id="pad-preview"></div>
+    <div class="pad-chips" id="pad-chips"></div>
+    <div class="pad-keys">
+      <button type="button" onclick="padKey('7')">7</button>
+      <button type="button" onclick="padKey('8')">8</button>
+      <button type="button" onclick="padKey('9')">9</button>
+      <button type="button" class="k-fn" onclick="padKey('back')">⌫</button>
+      <button type="button" onclick="padKey('4')">4</button>
+      <button type="button" onclick="padKey('5')">5</button>
+      <button type="button" onclick="padKey('6')">6</button>
+      <button type="button" class="k-op" onclick="padKey('+')">+</button>
+      <button type="button" onclick="padKey('1')">1</button>
+      <button type="button" onclick="padKey('2')">2</button>
+      <button type="button" onclick="padKey('3')">3</button>
+      <button type="button" class="k-op" onclick="padKey('-')">−</button>
+      <button type="button" class="k-fn" onclick="padKey('clear')">C</button>
+      <button type="button" onclick="padKey('0')">0</button>
+      <button type="button" onclick="padKey('000')">000</button>
+      <button type="button" class="k-ok" id="pad-ok" onclick="padDone()">✓</button>
     </div>
   </div>
 </div>
@@ -224,7 +255,7 @@
       <div id="planned-body"></div>
       <div class="tfoot r-plan hidden" id="planned-foot"></div>
       <div class="hint">
-        В «Факт» можно писать <code>1200+800</code> или <code>+500</code> (прибавится к текущему).
+        В «Факт» можно писать <code>1200+800</code>, <code>+500</code> или <code>−300</code> (прибавится к текущему или вычтется).
         <span class="desk">Строку можно утащить мышкой влево: «В бэклог» и «Удалить».</span>
         <span class="mob">Свайп влево по строке: «В бэклог» и «Удалить».</span>
       </div>

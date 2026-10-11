@@ -95,13 +95,13 @@ function setMyLimit(v) {
   renderSummary();
 }
 
-// «1200+800», «-300»; «+500» прибавляется к текущему значению. null — не разобрали.
+// «1200+800» — новая сумма; «+500» и «-300» в начале — к текущему значению. null — не разобрали.
 function parseSum(str, cur) {
-  const s = String(str).replace(/\s/g, '').replace(/,/g, '.');
+  const s = String(str).replace(/\s/g, '').replace(/,/g, '.').replace(/−/g, '-');
   if (s === '') return 0;
   if (!/^[+\-]?\d+(\.\d+)?([+\-]\d+(\.\d+)?)*$/.test(s)) return null;
   const total = s.match(/[+\-]?\d+(\.\d+)?/g).map(Number).reduce((a, b) => a + b, 0);
-  const v = s[0] === '+' ? cur + total : total;
+  const v = /^[+\-]/.test(s) ? cur + total : total;
   return Math.round(v * 100) / 100;
 }
 
@@ -235,7 +235,7 @@ function renderMandatory() {
         ${catDot(e.category, `cycleEntryCat(${id})`)}
         <input class="ci" data-f="name" value="${esc(e.name)}" placeholder="Название"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
-        <input class="ci r" data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
+        <input class="ci r" ${padAttrs()} data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
         <button class="mini-btn del" tabindex="-1" onclick="deleteEntry(${id})">×</button>
       </div>
@@ -311,9 +311,9 @@ function renderPlanned() {
             onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
           <span class="badge ${offPlan(e) ? '' : 'hidden'}">вне плана</span>
         </div>
-        <input class="ci r" data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
+        <input class="ci r" ${padAttrs()} data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
-        <input class="ci r" data-f="actual" inputmode="tel" value="${e.actual || ''}" placeholder="0"
+        <input class="ci r" ${padAttrs()} data-f="actual" inputmode="tel" value="${e.actual || ''}" placeholder="0"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
         <div class="rem ${r.cls}">${r.text}</div>
         <button class="mini-btn back" tabindex="-1" title="В бэклог" onclick="entryToBacklog(${id})">↓</button>
@@ -452,7 +452,7 @@ async function saveQuick(ev) {
   renderAll();
 }
 
-function onEscape() { closeQuick(); }
+function onEscape() { closeQuick(); if (pad) closePad(); }
 
 // ── бэклог ───────────────────────────────────────────────────────────────────
 
@@ -471,7 +471,7 @@ function renderBacklog() {
         ${catDot(b.category, `cycleBacklogCat(${id})`)}
         <input class="ci" data-f="name" value="${esc(b.name)}" placeholder="Название"
           onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
-        <input class="ci r" data-f="planned" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
+        <input class="ci r" ${padAttrs()} data-f="planned" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
           onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
         <button class="mini-btn plus" tabindex="-1" title="Запланировать в этот спринт"
           onclick="moveBacklogEntry(${id})" ${dis}>+</button>
@@ -573,3 +573,117 @@ function closeOtherSwipes(keep) {
 function hideActionsAfterSlide(row) {
   setTimeout(() => { if (!row.style.transform) row.parentElement.classList.remove('swiping'); }, 220);
 }
+
+// ── цифровая панель для сумм на телефоне ────────────────────────────────────
+// Вместо системной клавиатуры: + и − рядом с цифрами, подсказки по плану,
+// переключение План/Факт без закрытия. На компьютере поля печатаются как обычно.
+
+const touchUI = () => window.matchMedia('(pointer: coarse)').matches;
+function padAttrs() { return touchUI() ? 'readonly onclick="openPad(this)"' : 'inputmode="decimal"'; }
+
+let pad = null;   // { kind: 'entry'|'backlog', id, field, expr }
+
+const padItem = () => pad.kind === 'entry'
+  ? state.entries.find(e => e.id === pad.id)
+  : state.backlog.find(b => b.id === pad.id);
+const padOld = () => { const it = padItem(); return it ? it[pad.field] : 0; };
+
+function openPad(inp) {
+  const row = inp.closest('.row');
+  if (!row) return;
+  inp.blur();
+  const kind = row.dataset.eid ? 'entry' : 'backlog';
+  const raw = row.dataset.eid || row.dataset.bid;
+  const id = /^\d+$/.test(raw) ? Number(raw) : raw;
+  pad = { kind, id, field: inp.dataset.f, expr: '' };
+  renderPad();
+  $('pad-overlay').classList.remove('hidden');
+}
+
+function closePad() { $('pad-overlay').classList.add('hidden'); pad = null; }
+
+// четверть суммы, округлённая до круглого: до 1000 — до сотен, до 10К — до 500, дальше — до тысяч
+function roundNice(x) {
+  const step = x < 1000 ? 100 : x < 10000 ? 500 : 1000;
+  return Math.round(x / step) * step;
+}
+function quarterSteps(total) {
+  if (!(total > 0)) return [];
+  return [...new Set([1, 2, 3].map(k => roundNice(total * k / 4)))].filter(v => v > 0 && v < total);
+}
+
+function padChips() {
+  const it = padItem();
+  if (!it || pad.kind !== 'entry') return [];
+  const chips = [];
+  if (pad.field === 'actual') {
+    if (it.planned > it.actual) chips.push({ label: `Закрыть всё · ${money(it.planned)}`, expr: String(it.planned) });
+    quarterSteps(it.planned).filter(v => v < it.planned - it.actual)
+      .forEach(v => chips.push({ label: '+' + money(v), expr: '+' + v }));
+  } else if (it.type === 'planned') {
+    if (it.actual > 0 && it.actual !== it.planned) chips.push({ label: `= факт · ${money(it.actual)}`, expr: String(it.actual) });
+    quarterSteps(it.planned).forEach(v => chips.push({ label: '+' + money(v), expr: '+' + v }));
+  }
+  return chips;
+}
+
+function renderPad() {
+  const it = padItem();
+  if (!it) { closePad(); return; }
+  const old = padOld();
+  const isPlan = pad.kind === 'entry' && it.type === 'planned';
+  $('pad-title').textContent = it.name || 'Без названия';
+  $('pad-tabs').innerHTML = isPlan
+    ? ['planned', 'actual'].map(f => `<button type="button" class="pad-tab ${pad.field === f ? 'active' : ''}"
+        onclick="padField('${f}')">${f === 'planned' ? 'План' : 'Факт'}</button>`).join('')
+    : `<span class="pad-tab active">${pad.kind === 'backlog' ? 'Сумма' : 'Сумма платежа'}</span>`;
+  const v = pad.expr === '' ? null : parseSum(pad.expr, old);
+  $('pad-display').innerHTML = pad.expr === ''
+    ? `<span class="pad-ph">${old ? fmtAbs(old) : '0 ₽'}</span>`
+    : esc(pad.expr.replace(/([+\-])/g, ' $1 ').trim());
+  $('pad-preview').textContent = pad.expr === '' ? 'введи новую сумму или +сколько добавить'
+    : v === null ? 'допиши число'
+    : v < 0 ? `было ${money(old)} → меньше нуля нельзя`
+    : `было ${money(old)} → станет ${money(v)}`;
+  $('pad-chips').innerHTML = padChips().map(c =>
+    `<button type="button" class="pad-chip" onclick="padChip('${c.expr}')">${c.label}</button>`).join('');
+  $('pad-ok').disabled = pad.expr !== '' && (v === null || v < 0);
+}
+
+function padField(f) { pad.field = f; pad.expr = ''; renderPad(); }
+function padChip(expr) { pad.expr = expr; renderPad(); }
+
+function padKey(k) {
+  if (!pad) return;
+  if (navigator.vibrate) navigator.vibrate(5);
+  let s = pad.expr;
+  if (k === 'back') s = s.slice(0, -1);
+  else if (k === 'clear') s = '';
+  else if (k === '+' || k === '-') s = /[+\-]$/.test(s) ? s.slice(0, -1) + k : s + k;
+  else if (s.length < 24) s += k;
+  pad.expr = s;
+  renderPad();
+}
+
+async function padDone() {
+  if (!pad) return;
+  if (pad.expr === '') { closePad(); return; }
+  const old = padOld();
+  const v = parseSum(pad.expr, old);
+  if (v === null || v < 0) return;
+  const { kind, id, field } = pad;
+  const it = padItem();
+  const row = document.querySelector(`.row[data-${kind === 'entry' ? 'eid' : 'bid'}="${id}"]`);
+  closePad();
+  if (!row || v === old) return;
+  row.querySelector(`[data-f=${field}]`).value = v;
+  if (kind === 'entry') await saveEntry(id); else await saveBacklogEntry(id);
+  flash(`${it.name || 'Строка'}: ${money(old)} → ${money(v)}`);
+}
+
+document.addEventListener('keydown', e => {
+  if (!pad) return;
+  if (/^\d$/.test(e.key) || e.key === '+' || e.key === '-') padKey(e.key);
+  else if (e.key === 'Backspace') padKey('back');
+  else if (e.key === 'Enter') padDone();
+});

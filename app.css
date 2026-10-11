@@ -149,6 +149,49 @@ header { height: 60px; }
 .sheet .confirm-ok { background: var(--blue); }
 .sheet .confirm-ok:hover { background: #2563eb; }
 
+/* ── цифровая панель ── */
+.pad-overlay { z-index: 460; align-items: flex-end; padding: 0; }
+.pad {
+  background: var(--surface); width: 100%; max-width: 480px;
+  border-radius: 16px 16px 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,.18);
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 10px;
+  animation: pad-up .18s ease-out;
+}
+@keyframes pad-up { from { transform: translateY(40px); opacity: .4; } }
+.pad-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.pad-head b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pad-tabs { display: flex; background: var(--bg); border-radius: 8px; padding: 2px; flex-shrink: 0; }
+.pad-tab {
+  border: none; background: none; padding: 6px 14px; border-radius: 6px;
+  font: inherit; font-size: 13px; font-weight: 700; color: var(--muted2); cursor: pointer;
+}
+.pad-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.pad-display {
+  font-size: 34px; font-weight: 800; text-align: right; letter-spacing: -.5px;
+  min-height: 44px; padding: 0 4px; white-space: nowrap; overflow: hidden;
+}
+.pad-ph { color: #cbd5e1; }
+.pad-preview { text-align: right; font-size: 13px; color: var(--muted2); padding: 0 4px; min-height: 18px; }
+.pad-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.pad-chips:empty { display: none; }
+.pad-chip {
+  flex-shrink: 0; border: 1.5px solid var(--blue); background: var(--blue-light); color: var(--blue);
+  border-radius: 20px; padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.pad-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.pad-keys button {
+  height: 52px; border: none; border-radius: 10px; background: var(--bg);
+  font: inherit; font-size: 22px; font-weight: 600; color: var(--text); cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.pad-keys button:active { background: var(--border); }
+.pad-keys .k-fn { color: var(--muted2); font-size: 19px; }
+.pad-keys .k-op { background: var(--blue-light); color: var(--blue); font-size: 26px; }
+.pad-keys .k-ok { background: var(--blue); color: #fff; }
+.pad-keys .k-ok:disabled { background: var(--muted); }
+.row .ci[readonly] { cursor: pointer; }
+
 @media (max-width: 640px) {
   .month-label-btn.period { min-width: 150px; }
   .pockets { grid-template-columns: 1fr; }
