@@ -79,7 +79,12 @@ loadCurrentMonth = async function () {
 const sumBy = (list, f) => list.reduce((s, x) => s + f(x), 0);
 const money = n => (n < 0 ? '−' : '') + fmtAbs(Math.round(n));
 const used = e => Math.max(e.planned, e.actual);      // строка занимает большее из плана и факта
-const isPaid = e => e.planned > 0 && e.actual >= e.planned;
+// «Непредвиденные» среди обязательных — резерв, а не платёж: actual = сколько из него уже взяли
+// на перерасход. Взятое ушло в план траты, поэтому в обязательных считается только остаток.
+const isReserve = e => e.type === 'mandatory' && /непредвид/i.test(e.name);
+const reserveLeft = e => Math.max(0, e.planned - e.actual);
+const reserveRow = () => state.entries.find(isReserve) || null;
+const isPaid = e => !isReserve(e) && e.planned > 0 && e.actual >= e.planned;
 const curMonthRow = () => state.allMonths.find(m => m.id === state.monthId) || null;
 
 function catSort(list) {
@@ -117,7 +122,7 @@ const nextCat = cat => CAT_ORDER[(CAT_ORDER.indexOf(cat) + 1) % CAT_ORDER.length
 function calc() {
   const mandRows = state.entries.filter(e => e.type === 'mandatory');
   const plan     = state.entries.filter(e => e.type === 'planned');
-  const mand     = sumBy(mandRows, e => e.planned);
+  const mand     = sumBy(mandRows, e => isReserve(e) ? reserveLeft(e) : e.planned);
   const mandPaid = sumBy(mandRows.filter(isPaid), e => e.planned);
   const life     = state.income - mand - state.saved;
   const allocated = sumBy(plan, used);
@@ -228,13 +233,17 @@ function renderMandatory() {
   const rows = catSort(renderMandatoryTotal());
   $('mandatory-body').innerHTML = rows.map(e => {
     const id = idArg(e.id);
+    const res = isReserve(e);
     return `
     <div class="row-wrap">
       <div class="row r-mand ${isPaid(e) ? 'is-paid' : ''}" data-eid="${e.id}">
-        <label class="paid" title="Оплачено"><input type="checkbox" ${isPaid(e) ? 'checked' : ''} onchange="setPaid(${id},this.checked)"></label>
+        ${res ? '<div></div>' : `<label class="paid" title="Оплачено"><input type="checkbox" ${isPaid(e) ? 'checked' : ''} onchange="setPaid(${id},this.checked)"></label>`}
         ${catDot(e.category, `cycleEntryCat(${id})`)}
-        <input class="ci" data-f="name" value="${esc(e.name)}" placeholder="Название"
-          onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
+        <div class="name-cell">
+          <input class="ci" data-f="name" value="${esc(e.name)}" placeholder="Название"
+            onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
+          ${res ? `<span class="badge reserve" title="Резерв на перерасход">${e.actual ? 'осталось ' + money(reserveLeft(e)) : 'резерв'}</span>` : ''}
+        </div>
         <input class="ci r" ${padAttrs()} data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
         <button class="mini-btn del" tabindex="-1" onclick="deleteEntry(${id})">×</button>
@@ -315,7 +324,7 @@ function renderPlanned() {
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
         <input class="ci r" ${padAttrs()} data-f="actual" inputmode="tel" value="${e.actual || ''}" placeholder="0"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
-        <div class="rem ${r.cls}">${r.text}</div>
+        <div class="rem ${r.cls}" onclick="openCover(${id})">${r.text}</div>
         <button class="mini-btn back" tabindex="-1" title="В бэклог" onclick="entryToBacklog(${id})">↓</button>
         <button class="mini-btn del" tabindex="-1" title="Удалить" onclick="deleteEntry(${id})">×</button>
       </div>
@@ -369,8 +378,9 @@ async function saveEntry(eid) {
     }
   }
   renderSummary();
-  if (cur.type === 'mandatory') renderMandatoryTotal();
-  else patchPlannedRow(eid);
+  if (cur.type !== 'mandatory') patchPlannedRow(eid);
+  else if (isReserve(cur) !== isReserve(state.entries[idx]) || isReserve(cur)) renderMandatory();
+  else renderMandatoryTotal();
 }
 
 async function cycleEntryCat(eid) {
@@ -404,6 +414,72 @@ entryToBacklog = function (eid) {
     `По «${e.name || 'строке'}» уже потрачено ${money(e.actual)}. В бэклоге факта нет, эта сумма пропадёт из спринта.`,
     'Перенести', () => coreEntryToBacklog(eid));
 };
+
+// ── перерасход: покрыть из отложенных или непредвиденных ─────────────────────
+// План строки растёт до факта, источник уменьшается на ту же сумму. Перерасход до этого
+// съедал «Свободно», теперь его оплачивает источник, и «Свободно» возвращается.
+// Если в источнике меньше перерасхода, берём сколько есть.
+
+let coverId = null;
+
+function coverSources() {
+  const r = reserveRow();
+  return [
+    { id: 'saved', title: 'Из отложенных', avail: state.saved,
+      empty: 'отложенных нет' },
+    { id: 'reserve', title: 'Из непредвиденных', avail: r ? reserveLeft(r) : 0,
+      empty: r ? 'резерв исчерпан' : 'нет строки «Непредвиденные» в обязательных' },
+  ];
+}
+
+function openCover(eid) {
+  const e = state.entries.find(x => x.id === eid);
+  if (!e || e.planned <= 0 || e.actual <= e.planned) return;
+  coverId = eid;
+  const over = e.actual - e.planned;
+  $('cover-title').textContent = `Перерасход ${money(over)}`;
+  $('cover-text').textContent =
+    `«${e.name || 'Строка'}»: план ${money(e.planned)}, факт ${money(e.actual)}. План вырастет до факта, а сумму возьмём из:`;
+  $('cover-opts').innerHTML = coverSources().map(s => {
+    const amt = Math.min(over, s.avail);
+    const sub = amt <= 0 ? s.empty
+      : `${money(s.avail)} → ${money(s.avail - amt)}${amt < over ? ` · покроет только ${money(amt)}` : ''}`;
+    return `<button type="button" class="cover-opt" ${amt <= 0 ? 'disabled' : ''} onclick="coverFrom('${s.id}')">
+      <b>${s.title}</b><span>${sub}</span></button>`;
+  }).join('');
+  $('cover-overlay').classList.remove('hidden');
+}
+
+function closeCover() { $('cover-overlay').classList.add('hidden'); coverId = null; }
+
+async function coverFrom(src) {
+  const e = state.entries.find(x => x.id === coverId);
+  closeCover();
+  if (!e) return;
+  const s = coverSources().find(x => x.id === src);
+  const amt = Math.min(e.actual - e.planned, s.avail);
+  if (amt <= 0) return;
+
+  const planned = e.planned + amt;
+  await api.updateEntry(e.id, { planned });
+  e.planned = planned;
+
+  if (src === 'saved') {
+    const saved = state.saved - amt;
+    await api.updateMonth(state.monthId, { saved });
+    state.saved = saved;
+    const row = curMonthRow();
+    if (row) upsert(state.allMonths, { ...row, saved });
+    $('saved-inp').value = saved || '';
+  } else {
+    const r = reserveRow();
+    const actual = r.actual + amt;
+    await api.updateEntry(r.id, { actual });
+    r.actual = actual;
+  }
+  renderAll();
+  flash(`${e.name || 'Строка'}: +${money(amt)} к плану ${src === 'saved' ? 'из отложенных' : 'из непредвиденных'}`);
+}
 
 // ── потратил вне плана ───────────────────────────────────────────────────────
 
@@ -452,7 +528,7 @@ async function saveQuick(ev) {
   renderAll();
 }
 
-function onEscape() { closeQuick(); if (pad) closePad(); }
+function onEscape() { closeQuick(); closeCover(); if (pad) closePad(); }
 
 // ── бэклог ───────────────────────────────────────────────────────────────────
 

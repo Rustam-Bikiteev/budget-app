@@ -158,6 +158,18 @@
   </form>
 </div>
 
+<!-- Перерасход: покрыть из отложенных или непредвиденных -->
+<div id="cover-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeCover()">
+  <div class="sheet">
+    <h3 id="cover-title"></h3>
+    <p id="cover-text"></p>
+    <div class="cover-opts" id="cover-opts"></div>
+    <div class="confirm-btns">
+      <button type="button" class="confirm-cancel" onclick="closeCover()">Отмена</button>
+    </div>
+  </div>
+</div>
+
 <main>
 
   <!-- Empty state -->

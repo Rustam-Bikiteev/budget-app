@@ -149,6 +149,21 @@ header { height: 60px; }
 .sheet .confirm-ok { background: var(--blue); }
 .sheet .confirm-ok:hover { background: #2563eb; }
 
+/* ── перерасход: покрыть из отложенных / непредвиденных ── */
+#cover-overlay { z-index: 450; }
+.rem.neg { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.cover-opts { display: flex; flex-direction: column; gap: 8px; }
+.cover-opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left;
+  border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px;
+  background: var(--surface); cursor: pointer; font-family: inherit; color: var(--text);
+}
+.cover-opt b { font-size: 14px; }
+.cover-opt span { font-size: 12px; color: var(--muted2); }
+.cover-opt:hover:not(:disabled) { border-color: var(--blue); background: var(--blue-light); }
+.cover-opt:disabled { opacity: .5; cursor: default; }
+.badge.reserve { color: var(--blue); background: var(--blue-light); }
+
 /* ── цифровая панель ── */
 .pad-overlay { z-index: 460; align-items: flex-end; padding: 0; }
 .pad {
