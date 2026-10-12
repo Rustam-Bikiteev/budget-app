@@ -285,8 +285,9 @@ function plannedTotals() {
 function remInfo(e) {
   const rem = e.planned - e.actual;
   return {
-    cls: e.planned === 0 ? 'zero' : rem > 0 ? 'pos' : rem < 0 ? 'neg' : 'zero',
-    text: e.planned > 0 ? money(rem) : '—',
+    // у траты вне плана весь факт — перерасход: красным, чтобы можно было покрыть
+    cls: rem > 0 ? 'pos' : rem < 0 ? 'neg' : 'zero',
+    text: e.planned > 0 || e.actual > 0 ? money(rem) : '—',
   };
 }
 const offPlan = e => e.planned === 0 && e.actual > 0;
@@ -434,12 +435,13 @@ function coverSources() {
 
 function openCover(eid) {
   const e = state.entries.find(x => x.id === eid);
-  if (!e || e.planned <= 0 || e.actual <= e.planned) return;
+  if (!e || e.actual <= e.planned) return;
   coverId = eid;
   const over = e.actual - e.planned;
-  $('cover-title').textContent = `Перерасход ${money(over)}`;
-  $('cover-text').textContent =
-    `«${e.name || 'Строка'}»: план ${money(e.planned)}, факт ${money(e.actual)}. План вырастет до факта, а сумму возьмём из:`;
+  $('cover-title').textContent = offPlan(e) ? `Вне плана ${money(over)}` : `Перерасход ${money(over)}`;
+  $('cover-text').textContent = offPlan(e)
+    ? `«${e.name || 'Строка'}»: потрачено ${money(e.actual)} без плана. План станет равен факту, а сумму возьмём из:`
+    : `«${e.name || 'Строка'}»: план ${money(e.planned)}, факт ${money(e.actual)}. План вырастет до факта, а сумму возьмём из:`;
   $('cover-opts').innerHTML = coverSources().map(s => {
     const amt = Math.min(over, s.avail);
     const sub = amt <= 0 ? s.empty
