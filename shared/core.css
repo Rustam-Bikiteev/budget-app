@@ -437,32 +437,32 @@ td.col-num { cursor: text; }
   .ci { padding: 11px 4px; font-size: 13px; }
   .rem-cell { padding: 8px 4px; font-size: 12px; }
   /* Two lines keep names readable without horizontal scrolling. */
-  table:has(#planned-body) { display: block; }
-  table:has(#planned-body) thead { display: none; }
-  #planned-body { display: block; width: 100%; }
-  #planned-body tr {
+  .free-app table:has(#planned-body) { display: block; }
+  .free-app table:has(#planned-body) thead { display: none; }
+  .free-app #planned-body { display: block; width: 100%; }
+  .free-app #planned-body tr {
     display: grid;
     grid-template-columns: 40px repeat(3, minmax(0, 1fr)) 40px 40px;
     border-bottom: 1px solid var(--border);
   }
-  #planned-body td { width: auto; min-width: 0; border: 0; }
-  #planned-body .col-cat { grid-column: 1; grid-row: 1; }
-  #planned-body .col-name { grid-column: 2 / 5; grid-row: 1; }
-  #planned-body .col-move { grid-column: 5; grid-row: 1; }
-  #planned-body .col-del { grid-column: 6; grid-row: 1; }
-  #planned-body td:nth-child(3) { grid-column: 2; grid-row: 2; }
-  #planned-body td:nth-child(4) { grid-column: 3; grid-row: 2; }
-  #planned-body td:nth-child(5) { grid-column: 4; grid-row: 2; }
-  #planned-body .col-num::before { display: block; font-size: 10px; color: #475569; padding: 4px; }
-  #planned-body td:nth-child(3)::before { content: 'План'; }
-  #planned-body td:nth-child(4)::before { content: 'Факт'; }
-  #planned-body td:nth-child(5)::before { content: 'Осталось'; }
-  #planned-body .rem-cell { display: block; }
-  #planned-foot { display: block; width: 100%; }
-  #planned-foot tr { display: grid; grid-template-columns: 2fr repeat(3, 1fr); }
-  #planned-foot td { display: block; width: auto; min-width: 0; }
-  #planned-foot td:nth-child(n+5) { display: none; }
-  .ci { font-size: 16px; min-height: 44px; }
-  .nav-btn, .month-label-btn, .cal-year-btn { min-height: 44px; }
-  .cat-sel { width: 32px; height: 32px; }
+  .free-app #planned-body td { width: auto; min-width: 0; border: 0; }
+  .free-app #planned-body .col-cat { grid-column: 1; grid-row: 1; }
+  .free-app #planned-body .col-name { grid-column: 2 / 5; grid-row: 1; }
+  .free-app #planned-body .col-move { grid-column: 5; grid-row: 1; }
+  .free-app #planned-body .col-del { grid-column: 6; grid-row: 1; }
+  .free-app #planned-body td:nth-child(3) { grid-column: 2; grid-row: 2; }
+  .free-app #planned-body td:nth-child(4) { grid-column: 3; grid-row: 2; }
+  .free-app #planned-body td:nth-child(5) { grid-column: 4; grid-row: 2; }
+  .free-app #planned-body .col-num::before { display: block; font-size: 10px; color: #475569; padding: 4px; }
+  .free-app #planned-body td:nth-child(3)::before { content: 'План'; }
+  .free-app #planned-body td:nth-child(4)::before { content: 'Факт'; }
+  .free-app #planned-body td:nth-child(5)::before { content: 'Осталось'; }
+  .free-app #planned-body .rem-cell { display: block; }
+  .free-app #planned-foot { display: block; width: 100%; }
+  .free-app #planned-foot tr { display: grid; grid-template-columns: 2fr repeat(3, 1fr); }
+  .free-app #planned-foot td { display: block; width: auto; min-width: 0; }
+  .free-app #planned-foot td:nth-child(n+5) { display: none; }
+  .free-app .ci { font-size: 16px; min-height: 44px; }
+  .free-app .nav-btn, .free-app .month-label-btn, .free-app .cal-year-btn { min-height: 44px; }
+  .free-app .cat-sel { width: 32px; height: 32px; }
 }
