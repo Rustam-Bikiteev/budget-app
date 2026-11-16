@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="shared/core.css?v=3">
-<link rel="stylesheet" href="app.css?v=3">
+<link rel="stylesheet" href="app.css?v=4">
 <style>
 /* своё у версии с Supabase; общий интерфейс в shared/core.css */
 .logout-btn, .refresh-btn {
@@ -201,13 +201,12 @@
       </div>
       <div class="bar" id="h-bar"></div>
       <div class="legend" id="h-legend"></div>
-      <button class="formula-btn" onclick="toggleFormula()"><span id="f-arrow">▸</span> Как считается · доход и отложить</button>
-      <div class="formula hidden" id="formula">
-        <div class="f-row"><span>Доход спринта</span>
+      <div class="formula" id="formula" role="group" aria-label="Доход и расчёт бюджета">
+        <div class="f-row"><label for="income-inp">Доход спринта</label>
           <input class="edit-num" type="number" inputmode="decimal" id="income-inp" placeholder="0"
             onblur="saveMonthFields()" onkeydown="enterBlur(event)"></div>
         <div class="f-row"><span class="n">− Обязательные<small id="f-mand-sub"></small></span><b id="f-mand"></b></div>
-        <div class="f-row"><span class="n">− Отложить</span>
+        <div class="f-row"><label class="n" for="saved-inp">− Отложить</label>
           <input class="edit-num" type="number" inputmode="decimal" id="saved-inp" placeholder="0"
             onblur="saveMonthFields()" onkeydown="enterBlur(event)"></div>
         <div class="f-row sum"><span>= На жизнь</span><span id="f-life"></span></div>
@@ -299,7 +298,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="shared/core.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 <script>
 // Версия с Supabase: общий бюджет с Настей, живая синхронизация между телефонами.
 // Общее с free/ — в shared/core.js, свой интерфейс поверх него — в app.js,

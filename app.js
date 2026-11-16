@@ -137,13 +137,6 @@ function calc() {
 
 // ── сводка и кошельки ────────────────────────────────────────────────────────
 
-let formulaOpen = false;
-function toggleFormula() {
-  formulaOpen = !formulaOpen;
-  $('formula').classList.toggle('hidden', !formulaOpen);
-  $('f-arrow').textContent = formulaOpen ? '▾' : '▸';
-}
-
 function renderSummary() {
   const k = calc();
 

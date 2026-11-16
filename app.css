@@ -37,7 +37,6 @@ header { height: 60px; }
 .bar div { height: 100%; transition: width .25s; }
 .legend { display: flex; gap: 4px 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted2); }
 .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
-.formula-btn { margin-top: 12px; background: none; border: none; color: var(--blue); font-weight: 700; font-size: 13px; cursor: pointer; padding: 0; font-family: inherit; }
 .formula { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
 .f-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 14px; gap: 10px; }
 .f-row .n { color: var(--muted2); }
