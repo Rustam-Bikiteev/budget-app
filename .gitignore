@@ -2,6 +2,7 @@
 CLAUDE.md
 CONTEXT.md
 .claude/
+.playwright-mcp/
 budget.db
 .env
 migration.sql

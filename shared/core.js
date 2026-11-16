@@ -67,15 +67,6 @@ function enterBlur(e) { if (e.key === 'Enter') e.target.blur(); }
 
 function cellKeydown(e) {
   if (e.key === 'Enter') { e.target.blur(); return; }
-  if (e.key !== 'Tab' || e.shiftKey) return;
-  const tbody = e.target.closest('tbody');
-  if (!tbody) return;
-  const lastRow = [...tbody.querySelectorAll('tr[data-eid]')].at(-1);
-  if (!lastRow || e.target.closest('tr') !== lastRow) return;
-  const focusables = [...lastRow.querySelectorAll('input, select')];
-  if (focusables.at(-1) !== e.target) return;
-  e.preventDefault();
-  addEntry(tbody.id === 'mandatory-body' ? 'mandatory' : 'planned');
 }
 
 // ── status indicator ─────────────────────────────────────────────────────────
@@ -174,11 +165,13 @@ async function createCurrentMonth() {
 
 async function saveMonthFields() {
   if (!state.monthId) return;
+  const monthId = state.monthId;
   const income = num($('income-inp').value);
   const saved  = num($('saved-inp').value);
   if (income === state.income && saved === state.saved) return;
+  await api.updateMonth(monthId, { income, saved });
+  if (state.monthId !== monthId) return;
   state.income = income; state.saved = saved;
-  await api.updateMonth(state.monthId, { income, saved });
   flash('Сохранено');
   renderSummary();
 }
@@ -192,7 +185,7 @@ const defaultCat = () => cats[cats.length - 1].id;
 function catSelect(cat, handler) {
   const opts = (catById(cat) ? '' : `<option value="${esc(cat)}" selected>—</option>`)
     + cats.map(c => `<option value="${c.id}" ${c.id === cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
-  return `<select class="cat-sel" style="--cat:${catColor(cat)}" onchange="${handler}">${opts}</select>`;
+  return `<select aria-label="Категория" class="cat-sel" style="--cat:${catColor(cat)}" onchange="${handler}">${opts}</select>`;
 }
 
 function paintSelect(sel) { sel.style.setProperty('--cat', catColor(sel.value)); }
@@ -242,17 +235,17 @@ function renderMandatory() {
   $('mandatory-body').innerHTML = rows.map(e => {
     const id = idArg(e.id);
     return `
-    <tr data-eid="${e.id}">
-      <td class="col-cat">${catSelect(e.category, `onCatChange(${id},this)`)}</td>
-      <td class="col-name">
-        <input class="ci" type="text" value="${esc(e.name)}" placeholder="Название"
+    <tr role="row" data-eid="${e.id}">
+      <td role="cell" class="col-cat">${catSelect(e.category, `onCatChange(${id},this)`)}</td>
+      <td role="cell" class="col-name">
+        <input class="ci" type="text" aria-label="Название записи" value="${esc(e.name)}" placeholder="Название"
           onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
       </td>
-      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+      <td role="cell" class="col-num" onclick="this.querySelector('input')?.focus()">
         <input class="ci r" type="number" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
-          data-field="planned" onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
+          aria-label="Плановая сумма" data-field="planned" onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
       </td>
-      <td class="col-del"><button class="del-btn" tabindex="-1" onclick="deleteEntry(${id})">×</button></td>
+      <td role="cell" class="col-del"><button class="del-btn" aria-label="Удалить запись" onclick="deleteEntry(${id})">×</button></td>
     </tr>`;
   }).join('');
 }
@@ -284,9 +277,9 @@ function renderPlannedTotals() {
     foot.innerHTML = `
       <tr class="totals-row">
         <td colspan="2">Итого (${filtered.length})</td>
-        <td class="r">${f(totPlan)}</td>
-        <td class="r">${f(totActual)}</td>
-        <td class="r ${cls}">${(totRem < 0 ? '−' : '') + fA(totRem)}</td>
+        <td role="cell" class="r">${f(totPlan)}</td>
+        <td role="cell" class="r">${f(totActual)}</td>
+        <td role="cell" class="r ${cls}">${(totRem < 0 ? '−' : '') + fA(totRem)}</td>
         <td></td><td></td>
       </tr>`;
   } else {
@@ -300,23 +293,23 @@ function renderPlanned() {
     const r = remInfo(e);
     const id = idArg(e.id);
     return `
-    <tr data-eid="${e.id}">
-      <td class="col-cat">${catSelect(e.category, `onCatChange(${id},this)`)}</td>
-      <td class="col-name">
-        <input class="ci" type="text" value="${esc(e.name)}" placeholder="Название"
+    <tr role="row" data-eid="${e.id}">
+      <td role="cell" class="col-cat">${catSelect(e.category, `onCatChange(${id},this)`)}</td>
+      <td role="cell" class="col-name">
+        <input class="ci" type="text" aria-label="Название записи" value="${esc(e.name)}" placeholder="Название"
           onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
       </td>
-      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+      <td role="cell" class="col-num" onclick="this.querySelector('input')?.focus()">
         <input class="ci r" type="number" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
-          data-field="planned" onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
+          aria-label="Плановая сумма" data-field="planned" onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
       </td>
-      <td class="col-num" onclick="this.querySelector('input')?.focus()">
+      <td role="cell" class="col-num" onclick="this.querySelector('input')?.focus()">
         <input class="ci r" type="number" inputmode="decimal" value="${e.actual || ''}" placeholder="0"
-          data-field="actual" onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
+          aria-label="Фактическая сумма" data-field="actual" onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
       </td>
-      <td class="col-num"><span class="rem-cell ${r.cls}">${r.text}</span></td>
-      <td class="col-move"><button class="tobacklog-btn" tabindex="-1" title="В бэклог" onclick="entryToBacklog(${id})">↓</button></td>
-      <td class="col-del"><button class="del-btn" tabindex="-1" onclick="deleteEntry(${id})">×</button></td>
+      <td role="cell" class="col-num"><span class="rem-cell ${r.cls}">${r.text}</span></td>
+      <td role="cell" class="col-move"><button class="tobacklog-btn" aria-label="В бэклог" title="В бэклог" onclick="entryToBacklog(${id})">↓</button></td>
+      <td role="cell" class="col-del"><button class="del-btn" aria-label="Удалить запись" onclick="deleteEntry(${id})">×</button></td>
     </tr>`;
   }).join('');
   renderPlannedTotals();
@@ -340,6 +333,7 @@ function getRowValues(eid) {
 }
 
 async function saveEntry(eid) {
+  const monthId = state.monthId;
   const d = getRowValues(eid);
   if (!d) return;
   const idx = state.entries.findIndex(e => e.id === eid);
@@ -347,7 +341,10 @@ async function saveEntry(eid) {
   const patch = { category: d.category, name: d.name, planned: d.planned || 0, actual: d.actual || 0 };
   if (Object.keys(patch).every(k => cur[k] === patch[k])) return;
   await api.updateEntry(eid, patch);
-  state.entries[idx] = { ...cur, ...patch };
+  if (state.monthId !== monthId) return;
+  const currentIndex = state.entries.findIndex(e => e.id === eid);
+  if (currentIndex === -1) return;
+  state.entries[currentIndex] = { ...state.entries[currentIndex], ...patch };
   renderSummary();
   if (d.type === 'mandatory') renderMandatoryTotal();
   else patchPlannedRow(eid);
@@ -386,10 +383,12 @@ function deleteEntry(eid) {
 
 async function addEntry(type) {
   if (!state.monthId) return;
+  const monthId = state.monthId;
   const cat = (state.catFilter !== 'all' && type === 'planned') ? state.catFilter : defaultCat();
   const entry = await api.createEntry({
-    month_id: state.monthId, type, category: cat, name: '', planned: 0, actual: 0,
+    month_id: monthId, type, category: cat, name: '', planned: 0, actual: 0,
   });
+  if (state.monthId !== monthId) return;
   upsert(state.entries, entry);
   if (type === 'mandatory') renderMandatory();
   else renderPlanned();
@@ -444,7 +443,7 @@ function renderCalendar() {
     const has = h => state.allMonths.some(x => x.year === calYear && x.month === m && x.half === h);
     const cur = h => state.year === calYear && state.month === m && state.half === h;
     const btn = h => `<button class="cal-half ${has(h) ? 'has-data' : ''} ${cur(h) ? 'is-current' : ''}"
-          onclick="pickPeriod(${calYear},${m},${h})">${h}</button>`;
+          aria-label="${MN[m-1]} ${calYear}, период ${h}" onclick="pickPeriod(${calYear},${m},${h})">${h}</button>`;
     return `<div class="cal-month">
       <div class="cal-month-name">${mn}</div>
       <div class="cal-halves">${btn(1)}${btn(2)}</div>
@@ -462,17 +461,55 @@ function pickPeriod(y, m, h) {
 // ── confirm modal ─────────────────────────────────────────────────────────────
 
 let confirmCallback = null;
+const modalFocus = new WeakMap();
+
+function activeModal() {
+  return [$('confirm-overlay'), $('settings-overlay')].find(el => el && !el.classList.contains('hidden'));
+}
+
+function updateModalBackground() {
+  const active = activeModal();
+  document.querySelectorAll('header, main, .modal-overlay').forEach(el => {
+    el.inert = !!active && el !== active;
+  });
+}
+
+function openModal(overlay) {
+  modalFocus.set(overlay, document.activeElement);
+  overlay.classList.remove('hidden');
+  updateModalBackground();
+  overlay.querySelector('button, [tabindex="-1"]').focus();
+}
+
+function closeModal(overlay) {
+  overlay.classList.add('hidden');
+  updateModalBackground();
+  const previous = modalFocus.get(overlay);
+  if (previous && previous.isConnected) previous.focus();
+}
+
+document.addEventListener('keydown', e => {
+  const overlay = activeModal();
+  if (!overlay || e.key !== 'Tab') return;
+  const controls = [...overlay.querySelectorAll('button, input, select, a[href], [tabindex="0"]')]
+    .filter(el => !el.disabled && el.getClientRects().length);
+  const first = controls[0], last = controls.at(-1);
+  if (!first) { e.preventDefault(); return; }
+  if (!controls.includes(document.activeElement)) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 function openConfirm(title, text, okLabel, callback) {
   confirmCallback = callback;
   $('confirm-title').textContent = title;
   $('confirm-name').textContent = text || '';
   $('confirm-ok').textContent = okLabel;
-  $('confirm-overlay').classList.remove('hidden');
+  openModal($('confirm-overlay'));
 }
 
 function closeConfirm() {
-  $('confirm-overlay').classList.add('hidden');
+  closeModal($('confirm-overlay'));
   confirmCallback = null;
 }
 
@@ -494,6 +531,7 @@ let backlogOpen = false;
 
 function toggleBacklog() {
   backlogOpen = !backlogOpen;
+  document.querySelector('.backlog-header').setAttribute('aria-expanded', String(backlogOpen));
   $('backlog-content').classList.toggle('hidden', !backlogOpen);
   $('backlog-arrow').textContent = backlogOpen ? '▾' : '▸';
 }
@@ -508,22 +546,22 @@ function renderBacklog() {
   $('backlog-body').innerHTML = state.backlog.map(b => {
     const id = idArg(b.id);
     return `
-    <tr data-bid="${b.id}">
-      <td class="col-cat">${catSelect(b.category, `onBacklogCatChange(${id},this)`)}</td>
-      <td class="col-name">
-        <input class="ci" type="text" value="${esc(b.name)}" placeholder="Название"
+    <tr role="row" data-bid="${b.id}">
+      <td role="cell" class="col-cat">${catSelect(b.category, `onBacklogCatChange(${id},this)`)}</td>
+      <td role="cell" class="col-name">
+        <input class="ci" type="text" aria-label="Название покупки" value="${esc(b.name)}" placeholder="Название"
           onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
       </td>
-      <td class="col-num" onclick="this.querySelector('input')?.focus()">
-        <input class="ci r" type="number" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
+      <td role="cell" class="col-num" onclick="this.querySelector('input')?.focus()">
+        <input class="ci r" aria-label="Плановая сумма" type="number" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
           onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
       </td>
-      <td class="col-move">
-        <button class="move-btn" tabindex="-1" title="Перенести в планируемые"
+      <td role="cell" class="col-move">
+        <button class="move-btn" aria-label="Перенести в планируемые" title="Перенести в планируемые"
           onclick="moveBacklogEntry(${id})" ${!state.monthId ? 'disabled' : ''}>+</button>
       </td>
-      <td class="col-del">
-        <button class="del-btn" tabindex="-1" onclick="deleteBacklogEntry(${id})">×</button>
+      <td role="cell" class="col-del">
+        <button class="del-btn" aria-label="Удалить запись" onclick="deleteBacklogEntry(${id})">×</button>
       </td>
     </tr>`;
   }).join('');
@@ -571,9 +609,10 @@ function deleteBacklogEntry(bid) {
 
 async function moveBacklogEntry(bid) {
   if (!state.monthId) return;
-  const entry = await api.backlogToEntry(bid, state.monthId);
+  const monthId = state.monthId;
+  const entry = await api.backlogToEntry(bid, monthId);
   state.backlog = state.backlog.filter(b => b.id !== bid);
-  upsert(state.entries, entry);
+  if (state.monthId === monthId) upsert(state.entries, entry);
   renderBacklog();
   renderPlanned();
   renderSummary();

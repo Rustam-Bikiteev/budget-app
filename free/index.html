@@ -98,6 +98,8 @@
 .swatch.on { border-color: var(--text); }
 
 @media (max-width: 640px) {
+  .icon-btn { width: 40px; height: 44px; }
+  .swatch { width: 32px; height: 32px; }
   .settings-sec .del-btn { position: static; width: 30px; height: 30px; }
   .cat-row { flex-wrap: wrap; }
   .swatches { max-width: none; order: 3; width: 100%; }
@@ -106,7 +108,7 @@
 </head>
 <body>
 
-<div id="sync-dot"></div>
+<div id="sync-dot" role="status" aria-live="polite"></div>
 
 <header>
   <h1>Бюджет</h1>
@@ -119,9 +121,9 @@
       </button>
       <div id="cal-popup" class="cal-popup hidden">
         <div class="cal-year-nav">
-          <button class="cal-year-btn" onclick="calPickYear(-1)">‹</button>
+          <button class="cal-year-btn" aria-label="Предыдущий год" onclick="calPickYear(-1)">‹</button>
           <span id="cal-year-display"></span>
-          <button class="cal-year-btn" onclick="calPickYear(1)">›</button>
+          <button class="cal-year-btn" aria-label="Следующий год" onclick="calPickYear(1)">›</button>
         </div>
         <div id="cal-months-grid" class="cal-months"></div>
       </div>
@@ -129,7 +131,7 @@
     <button class="nav-btn" onclick="shiftMonth(1)" aria-label="Следующий период">›</button>
   </div>
   <div class="header-actions">
-    <button class="icon-btn" title="Настройки и резервная копия" aria-label="Настройки" onclick="openSettings()">
+    <button id="settings-button" class="icon-btn" title="Настройки и резервная копия" aria-label="Настройки" onclick="openSettings()">
       ⚙<span class="badge hidden" id="settings-badge"></span>
     </button>
   </div>
@@ -137,7 +139,7 @@
 
 <!-- Confirm modal -->
 <div id="confirm-overlay" class="modal-overlay hidden">
-  <div class="confirm-box">
+  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-name" tabindex="-1">
     <p class="confirm-title" id="confirm-title"></p>
     <p class="confirm-name" id="confirm-name"></p>
     <div class="confirm-btns">
@@ -149,15 +151,16 @@
 
 <!-- Settings modal -->
 <div id="settings-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeSettings()">
-  <div class="settings-box">
+  <div class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1">
     <div class="settings-head">
-      <h2>Настройки</h2>
+      <h2 id="settings-title">Настройки</h2>
       <button class="icon-btn" aria-label="Закрыть" onclick="closeSettings()">×</button>
     </div>
 
     <section class="settings-sec">
       <h3>Резервная копия</h3>
       <p class="hint" id="backup-status"></p>
+      <button id="confirm-export-btn" class="btn-link hidden" onclick="confirmExportSaved()">Я сохранил файл вне браузера</button>
       <div class="btn-row">
         <button class="btn-primary btn-sm" onclick="exportBackup()">Сохранить копию</button>
         <button class="btn-secondary btn-sm" onclick="pickImportFile()">Восстановить из файла</button>
@@ -181,6 +184,13 @@
       <h3>Где хранятся данные</h3>
       <p class="hint" id="storage-status"></p>
     </section>
+    <section class="settings-sec">
+      <h3>О приложении</h3>
+      <p class="hint">Бюджет · 0.1.0 beta. Бесплатная версия без синхронизации.</p>
+      <button class="btn-link" onclick="showGuide()">Справка и установка</button>
+      <a href="https://github.com/Rustam-Bikiteev/budget-app/issues/new" target="_blank" rel="noopener noreferrer">Сообщить об ошибке на GitHub</a>
+      <p class="hint">Обращение будет публичным. Укажите версию, браузер и шаги ошибки. Не прикладывайте копию бюджета или личные суммы.</p>
+    </section>
   </div>
 </div>
 
@@ -189,6 +199,20 @@
 <main>
 
   <div id="banner" class="banner hidden"></div>
+  <section id="guide" class="banner info hidden" aria-labelledby="guide-title">
+    <div class="banner-text">
+      <h2 id="guide-title" tabindex="-1">Бюджет от выплаты до выплаты</h2>
+      <p>Выберите месяц и период 1 или 2, затем создайте бюджет. Введите полученное и отложенное, добавьте обязательные платежи и планируемые покупки. «Факт» заполняйте по мере трат.</p>
+      <p>В каждом месяце два периода. При открытии автоматически выбран период 1 в дни 10–24, период 2 в остальные дни текущего месяца. Это не деление на 1–15 и 16–конец. Другой период можно выбрать стрелками или в календаре.</p>
+      <p>Обязательные платежи вычитаются по указанной сумме сразу. «Можно тратить» = получено − обязательные − отложено. «Остаток» дополнительно учитывает фактические траты. Будущие покупки можно перенести в бэклог.</p>
+      <p>Данные остаются в этом браузере. На другом устройстве они сами не появятся. В настройках сохраните JSON-копию вне браузера; она нужна для переноса и восстановления. Файл не зашифрован.</p>
+      <details><summary>Установка и работа без сети</summary>
+        <p>iPhone: откройте в Safari → «Поделиться» → «На экран Домой». Android: меню Chrome → «Добавить на главный экран» или «Установить приложение». Названия пунктов зависят от версии браузера.</p>
+        <p>Один раз откройте приложение с интернетом, дождитесь загрузки и проверьте повторный запуск без сети. Установка не заменяет резервную копию. После смены домена или браузера понадобится восстановление из JSON.</p>
+      </details>
+    </div>
+    <button class="btn-secondary btn-sm" onclick="dismissGuide()">Понятно</button>
+  </section>
 
   <!-- Empty state -->
   <div id="empty-state" class="empty-state hidden">
@@ -256,7 +280,7 @@
         <h2>Обязательные платежи</h2>
         <span class="section-total" id="mandatory-total"></span>
       </div>
-      <table>
+      <table role="table">
         <thead>
           <tr>
             <th class="col-cat">Категория</th>
@@ -274,12 +298,12 @@
 
     <!-- Backlog -->
     <div class="section">
-      <div class="section-header backlog-header" onclick="toggleBacklog()">
+      <div class="section-header backlog-header" role="button" tabindex="0" aria-expanded="false" aria-controls="backlog-content" onclick="toggleBacklog()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleBacklog();}">
         <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Бэклог</h2>
         <span class="section-total" id="backlog-total"></span>
       </div>
       <div id="backlog-content" class="hidden">
-        <table>
+        <table role="table">
           <thead>
             <tr>
               <th class="col-cat">Категория</th>
@@ -304,7 +328,7 @@
         <span class="section-total" id="planned-total"></span>
       </div>
       <div class="cat-tabs" id="cat-tabs"></div>
-      <table>
+      <table role="table">
         <thead>
           <tr>
             <th class="col-cat">Категория</th>
@@ -338,12 +362,13 @@ const DEFAULT_CATS = [
   { id: 'shared', name: 'Общие', color: '#10b981' },
 ];
 const BACKUP_FORMAT = 1;
+const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
 const DAY = 24 * 60 * 60 * 1000;
 const STALE_BACKUP_MS = 3 * DAY;
 
 coreConfig.copyPrevByDefault = true;
 cats = DEFAULT_CATS;
-const meta = { lastBackupAt: 0, lastChangeAt: 0, hasPreImport: false };
+const meta = { lastBackupAt: 0, lastExportAt: 0, lastChangeAt: 0, hasPreImport: false };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -561,6 +586,7 @@ const api = {
     data.backlog.forEach(r => s.backlog.add(r));
     s.meta.put({ key: 'categories', value: data.categories });
     if (previous) s.meta.put({ key: 'preImport', value: previous });
+    else s.meta.delete('preImport');
   }),
 };
 
@@ -606,13 +632,16 @@ document.addEventListener('focusout', () => {
 // ── init / load ───────────────────────────────────────────────────────────────
 
 async function loadMeta() {
-  const [c, lb, lc, pre] = await Promise.all([
+  const [c, lb, lc, pre, le, guideSeen] = await Promise.all([
     getMeta('categories'), getMeta('lastBackupAt'), getMeta('lastChangeAt'), getMeta('preImport'),
+    getMeta('lastExportAt'), getMeta('guideSeen'),
   ]);
   cats = Array.isArray(c) && c.length ? c : DEFAULT_CATS;
   meta.lastBackupAt = lb || 0;
+  meta.lastExportAt = le || 0;
   meta.lastChangeAt = lc || 0;
   meta.hasPreImport = !!pre;
+  $('guide').classList.toggle('hidden', !!guideSeen);
 }
 
 async function init() {
@@ -638,11 +667,17 @@ function downloadBlob(blob, name) {
   setTimeout(() => URL.revokeObjectURL(a.href), 10000);
 }
 
-async function markBackedUp() {
-  meta.lastBackupAt = Date.now();
+async function markBackedUp(at = Date.now()) {
+  meta.lastBackupAt = at;
   await setMeta('lastBackupAt', meta.lastBackupAt);
   renderBanner();
   renderSettings();
+}
+
+async function confirmExportSaved() {
+  if (!meta.lastExportAt) return;
+  await markBackedUp(meta.lastExportAt);
+  flash('Сохранение файла подтверждено');
 }
 
 async function exportBackup() {
@@ -662,8 +697,10 @@ async function exportBackup() {
   } else {
     downloadBlob(blob, name);
   }
-  await markBackedUp();
-  flash('Копия сохранена');
+  meta.lastExportAt = Date.parse(data.exportedAt);
+  await setMeta('lastExportAt', meta.lastExportAt);
+  renderSettings();
+  flash('Копия подготовлена. Проверьте сохранённый файл');
 }
 
 function pickImportFile() { $('import-file').click(); }
@@ -679,18 +716,44 @@ function normalizeBackup(raw) {
   if (!raw || raw.app !== 'budget' || !Array.isArray(raw.months)) {
     throw new Error('это не резервная копия бюджета');
   }
-  if ((raw.format || 1) > BACKUP_FORMAT) {
+  const format = raw.format === undefined ? 1 : raw.format;
+  if (!Number.isInteger(format) || format < 1) throw new Error('некорректная версия копии');
+  if (format > BACKUP_FORMAT) {
     throw new Error('копия сделана более новой версией приложения, обнови страницу');
   }
+  for (const key of ['entries', 'backlog', 'categories']) {
+    if (raw[key] !== undefined && !Array.isArray(raw[key])) {
+      throw new Error('некорректный список: ' + key);
+    }
+  }
+  const amount = value => {
+    if (typeof value !== 'number' || !Number.isFinite(value)
+        || Math.abs(value) > Number.MAX_SAFE_INTEGER / 100) {
+      throw new Error('некорректная сумма');
+    }
+    return value;
+  };
+  const uniqueIds = rows => {
+    const ids = new Set();
+    for (const row of rows) {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) throw new Error('некорректная запись');
+      const id = asId(row.id);
+      if (ids.has(id)) throw new Error('id повторяется: ' + id);
+      ids.add(id);
+    }
+  };
+  [raw.months, raw.entries || [], raw.backlog || [], raw.categories || []].forEach(uniqueIds);
   const now = Date.now();
   const periods = new Set();
   const months = raw.months.map(m => {
     const r = {
-      id: asId(m.id), year: Math.trunc(num(m.year)), month: Math.trunc(num(m.month)),
-      half: Math.trunc(num(m.half)), income: num(m.income), saved: num(m.saved),
+      id: asId(m.id), year: m.year, month: m.month,
+      half: m.half, income: amount(m.income), saved: amount(m.saved),
       created_at: m.created_at || now, updated_at: m.updated_at || now,
     };
-    if (r.month < 1 || r.month > 12 || (r.half !== 1 && r.half !== 2) || r.year < 2000) {
+    if (!Number.isInteger(r.year) || r.year < 2000 || r.year > 9999
+        || !Number.isInteger(r.month) || r.month < 1 || r.month > 12
+        || (r.half !== 1 && r.half !== 2)) {
       throw new Error('некорректный период ' + r.id);
     }
     const key = `${r.year}-${r.month}-${r.half}`;
@@ -701,11 +764,12 @@ function normalizeBackup(raw) {
   const monthIds = new Set(months.map(m => m.id));
   const used = new Set();
   const entries = (raw.entries || []).map((e, i) => {
+    if (e.type !== 'mandatory' && e.type !== 'planned') throw new Error('некорректный тип записи');
     const r = {
       id: asId(e.id), month_id: asId(e.month_id),
-      type: e.type === 'mandatory' ? 'mandatory' : 'planned',
+      type: e.type,
       category: asId(e.category), name: String(e.name ?? '').slice(0, 200),
-      planned: num(e.planned), actual: num(e.actual),
+      planned: amount(e.planned), actual: amount(e.actual),
       created_at: e.created_at || now + i, updated_at: e.updated_at || now,
     };
     if (!monthIds.has(r.month_id)) throw new Error('запись ссылается на несуществующий период');
@@ -715,7 +779,7 @@ function normalizeBackup(raw) {
   const backlog = (raw.backlog || []).map((b, i) => {
     const r = {
       id: asId(b.id), category: asId(b.category), name: String(b.name ?? '').slice(0, 200),
-      planned: num(b.planned), created_at: b.created_at || now + i, updated_at: b.updated_at || now,
+      planned: amount(b.planned), created_at: b.created_at || now + i, updated_at: b.updated_at || now,
     };
     used.add(r.category);
     return r;
@@ -741,6 +805,7 @@ async function onImportFile(input) {
   if (!file) return;
   let data;
   try {
+    if (file.size > MAX_BACKUP_BYTES) throw new Error('файл больше 10 МБ');
     data = normalizeBackup(JSON.parse(await file.text()));
   } catch (e) {
     flash('Файл не подошёл: ' + e.message, true);
@@ -753,7 +818,7 @@ async function onImportFile(input) {
       + (hasData ? ' Текущие данные будут заменены — их можно будет вернуть из настроек.' : ''),
     'Восстановить',
     async () => {
-      const previous = hasData ? await api.snapshot() : null;
+      const previous = await api.snapshot();
       await api.restore(data, previous);
       await init();
       flash('Данные восстановлены');
@@ -778,6 +843,8 @@ async function undoImport() {
 let fileHandle = null;
 let filePerm = 'none';   // none | prompt | granted
 let fileTimer = null;
+let fileWritePromise = null;
+let fileError = '';
 
 async function loadFileHandle() {
   if (!fsSupported) return;
@@ -825,20 +892,33 @@ function scheduleFileSave() {
 async function writeBackupFile() {
   clearTimeout(fileTimer);
   fileTimer = null;
+  if (fileWritePromise) {
+    await fileWritePromise;
+    return writeBackupFile();
+  }
   if (!fileHandle || filePerm !== 'granted') return;
-  try {
+  const handle = fileHandle;
+  let writer;
+  fileWritePromise = (async () => { try {
     const data = await api.snapshot();
     // createWritable пишет во временный файл и подменяет им оригинал при close()
-    const w = await fileHandle.createWritable();
-    await w.write(JSON.stringify(data));
-    await w.close();
-    await markBackedUp();
+    writer = await handle.createWritable();
+    await writer.write(JSON.stringify(data));
+    await writer.close();
+    if (fileHandle === handle) {
+      fileError = '';
+      await markBackedUp(Date.parse(data.exportedAt));
+    }
   } catch (e) {
-    filePerm = await fileHandle.queryPermission({ mode: 'readwrite' }).catch(() => 'prompt');
+    if (writer && typeof writer.abort === 'function') await writer.abort().catch(() => {});
+    if (fileHandle !== handle) return;
+    fileError = e.message;
+    filePerm = await handle.queryPermission({ mode: 'readwrite' }).catch(() => 'prompt');
     flash('Автосохранение в файл не удалось: ' + e.message, true);
     renderBanner();
     renderSettings();
-  }
+  } })();
+  try { await fileWritePromise; } finally { fileWritePromise = null; }
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -855,7 +935,7 @@ function renderBanner() {
   const stale = hasData && meta.lastChangeAt > meta.lastBackupAt
     && Date.now() - meta.lastBackupAt > STALE_BACKUP_MS;
   const iosHint = isIOS && !isStandalone
-    ? ' На iPhone добавь страницу на экран «Домой» (Поделиться → На экран «Домой»): Safari стирает данные сайтов, которые не открывали 7 дней.'
+    ? ' На iPhone можно добавить страницу на экран «Домой» через «Поделиться». Установка не заменяет резервную копию.'
     : '';
   let html = '';
   let info = false;
@@ -865,11 +945,11 @@ function renderBanner() {
     html = `<div class="banner-text"><b>Данные хранятся только на этом устройстве</b>
       Без регистрации и сервера. Раз в несколько дней сохраняй резервную копию — она спасёт при очистке браузера или смене телефона.${iosHint}</div>
       <div class="banner-actions"><button class="btn-secondary btn-sm" onclick="pickImportFile()">Восстановить из копии</button></div>`;
-  } else if (fileHandle && filePerm === 'prompt') {
+  } else if (fileHandle && (filePerm !== 'granted' || fileError)) {
     html = `<div class="banner-text"><b>Автосохранение в файл на паузе</b>
-      Браузер просит заново разрешить запись в файл.</div>
+      Проверьте разрешение и доступность файла в настройках.</div>
       <div class="banner-actions"><button class="btn-primary btn-sm" onclick="resumeBackupFile()">Разрешить</button></div>`;
-  } else if (stale && filePerm !== 'granted' && !bannerDismissed) {
+  } else if (stale && !bannerDismissed) {
     const when = meta.lastBackupAt
       ? `Последняя копия — ${daysAgo(meta.lastBackupAt)} дн. назад.`
       : 'Резервной копии ещё нет.';
@@ -884,25 +964,41 @@ function renderBanner() {
   el.innerHTML = html;
   el.classList.toggle('info', info);
   el.classList.toggle('hidden', !html);
-  $('settings-badge').classList.toggle('hidden', !(stale && filePerm !== 'granted'));
+  $('settings-badge').classList.toggle('hidden', !(stale || fileError));
 }
 
 // ── settings ──────────────────────────────────────────────────────────────────
 
 function openSettings() {
   renderSettings();
-  $('settings-overlay').classList.remove('hidden');
+  openModal($('settings-overlay'));
 }
 
 function closeSettings() {
-  document.activeElement && document.activeElement.blur();
-  $('settings-overlay').classList.add('hidden');
+  closeModal($('settings-overlay'));
+}
+
+function showGuide() {
+  closeSettings();
+  $('guide').classList.remove('hidden');
+  $('guide-title').focus();
+  $('guide').scrollIntoView({ block: 'start' });
+}
+
+async function dismissGuide() {
+  await setMeta('guideSeen', true);
+  $('guide').classList.add('hidden');
+  $('settings-button').focus();
 }
 
 async function renderSettings() {
   $('backup-status').innerHTML = meta.lastBackupAt
-    ? `Последняя копия: <b>${fmtDate(meta.lastBackupAt)}</b>.`
-    : '<b>Копий ещё не было.</b> Сохрани файл в облако (iCloud, Google Drive) или отправь себе в мессенджер.';
+    ? `Последняя подтверждённая копия: <b>${fmtDate(meta.lastBackupAt)}</b>.`
+    : '<b>Подтверждённых копий пока нет.</b> Сохраните файл вне браузера и проверьте, что он открывается.';
+  if (meta.lastExportAt > meta.lastBackupAt) {
+    $('backup-status').innerHTML += ` Экспорт подготовлен ${fmtDate(meta.lastExportAt)}. Браузер не подтверждает, куда вы сохранили файл.`;
+  }
+  $('confirm-export-btn').classList.toggle('hidden', meta.lastExportAt <= meta.lastBackupAt);
 
   $('autosave-block').classList.toggle('hidden', !fsSupported);
   if (fsSupported) {
@@ -910,11 +1006,11 @@ async function renderSettings() {
     if (!fileHandle) {
       status = 'Автосохранение в файл выключено. Можно выбрать файл, например в папке Google Drive или Яндекс Диска на компьютере — копия будет обновляться после каждой правки.';
       actions = '<button class="btn-secondary btn-sm" onclick="chooseBackupFile()">Выбрать файл</button>';
-    } else if (filePerm === 'granted') {
+    } else if (filePerm === 'granted' && !fileError) {
       status = `Автосохранение включено: <b>${esc(fileHandle.name)}</b>.`;
       actions = '<button class="btn-secondary btn-sm" onclick="disableBackupFile()">Отключить</button>';
     } else {
-      status = `Автосохранение в <b>${esc(fileHandle.name)}</b> на паузе: нужно разрешение браузера.`;
+      status = `Автосохранение в <b>${esc(fileHandle.name)}</b> на паузе. ${fileError ? esc(fileError) : 'Нужно разрешение браузера.'}`;
       actions = '<button class="btn-primary btn-sm" onclick="resumeBackupFile()">Разрешить</button>'
         + '<button class="btn-secondary btn-sm" onclick="disableBackupFile()">Отключить</button>';
     }
@@ -930,18 +1026,18 @@ async function renderSettings() {
   $('storage-status').innerHTML =
     'Только в этом браузере на этом устройстве, никуда не отправляются. '
     + (persisted
-      ? 'Браузер <b>не удалит</b> их сам при нехватке места. '
+      ? 'Браузер предоставил защиту от автоматического удаления при нехватке места. '
       : 'Браузер может удалить их сам при нехватке места. ')
     + '<b>Очистка данных сайта вручную стирает всё</b> — от этого защищает только резервная копия.'
     + (isIOS && !isStandalone
-      ? '<br><br>На iPhone добавь страницу на экран «Домой»: иначе Safari сотрёт данные, если сайт не открывали 7 дней.'
+      ? '<br><br>На iPhone страницу можно добавить на экран «Домой» через «Поделиться». Копию всё равно сохраняйте отдельно.'
       : '');
 }
 
 function renderCatEditor() {
   $('cat-list').innerHTML = cats.map(c => `
     <div class="cat-row" style="--cat:${c.color}">
-      <input class="cat-name" value="${esc(c.name)}" maxlength="24" placeholder="Название"
+      <input class="cat-name" aria-label="Название категории" value="${esc(c.name)}" maxlength="24" placeholder="Название"
         onchange="renameCat('${c.id}', this.value)" onkeydown="enterBlur(event)">
       <div class="swatches">${COLORS.map(col => `
         <button class="swatch ${col === c.color ? 'on' : ''}" style="background:${col}"
