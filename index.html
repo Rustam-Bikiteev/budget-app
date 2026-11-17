@@ -11,8 +11,8 @@
 <meta name="apple-mobile-web-app-title" content="Бюджет">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
-<link rel="stylesheet" href="shared/core.css?v=3">
-<link rel="stylesheet" href="app.css?v=4">
+<link rel="stylesheet" href="shared/core.css?v=4">
+<link rel="stylesheet" href="app.css?v=5">
 <style>
 /* своё у версии с Supabase; общий интерфейс в shared/core.css */
 .logout-btn, .refresh-btn {
@@ -62,8 +62,8 @@
 <div id="login-overlay" class="login-overlay hidden">
   <form class="login-box" onsubmit="doLogin(event)">
     <h2>Бюджет</h2>
-    <input type="email" id="login-email" placeholder="Почта" autocomplete="username" required>
-    <input type="password" id="login-pass" placeholder="Пароль" autocomplete="current-password" required>
+    <input type="email" id="login-email" aria-label="Почта" placeholder="Почта" autocomplete="username" required>
+    <input type="password" id="login-pass" aria-label="Пароль" placeholder="Пароль" autocomplete="current-password" required>
     <p class="login-err" id="login-err"></p>
     <button class="btn-primary" id="login-btn" type="submit">Войти</button>
   </form>
@@ -101,7 +101,7 @@
 
 <!-- Confirm modal -->
 <div id="confirm-overlay" class="modal-overlay hidden">
-  <div class="confirm-box">
+  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
     <p class="confirm-title" id="confirm-title"></p>
     <p class="confirm-name" id="confirm-name"></p>
     <div class="confirm-btns">
@@ -113,7 +113,7 @@
 
 <!-- Цифровая панель для сумм (телефон) -->
 <div id="pad-overlay" class="modal-overlay pad-overlay hidden" onclick="if (event.target === this) closePad()">
-  <div class="pad">
+  <div class="pad" role="dialog" aria-modal="true" aria-labelledby="pad-title">
     <div class="pad-head">
       <b id="pad-title"></b>
       <div class="pad-tabs" id="pad-tabs"></div>
@@ -144,10 +144,10 @@
 
 <!-- Потратил вне плана -->
 <div id="sheet-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeQuick()">
-  <form class="sheet" onsubmit="saveQuick(event)">
-    <h3>Потратил вне плана</h3>
-    <input id="q-sum" inputmode="tel" placeholder="Сумма, ₽" autocomplete="off">
-    <input id="q-name" type="text" placeholder="На что (например, Аптека)" list="q-names" autocomplete="off">
+  <form class="sheet" role="dialog" aria-modal="true" aria-labelledby="quick-title" onsubmit="saveQuick(event)">
+    <h3 id="quick-title">Потратил вне плана</h3>
+    <input id="q-sum" aria-label="Сумма расхода, ₽" inputmode="tel" placeholder="Сумма, ₽" autocomplete="off">
+    <input id="q-name" aria-label="Название расхода" type="text" placeholder="На что (например, Аптека)" list="q-names" autocomplete="off">
     <datalist id="q-names"></datalist>
     <div class="who" id="q-who"></div>
     <p>Если название совпадёт со строкой той же категории, сумма прибавится к её факту. Иначе появится новая строка с пометкой «вне плана».</p>
@@ -160,7 +160,7 @@
 
 <!-- Перерасход: покрыть из отложенных или непредвиденных -->
 <div id="cover-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeCover()">
-  <div class="sheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cover-title" aria-describedby="cover-text">
     <h3 id="cover-title"></h3>
     <p id="cover-text"></p>
     <div class="cover-opts" id="cover-opts"></div>
@@ -268,7 +268,7 @@
       <div class="hint">
         В «Факт» можно писать <code>1200+800</code>, <code>+500</code> или <code>−300</code> (прибавится к текущему или вычтется).
         <span class="desk">Строку можно утащить мышкой влево: «В бэклог» и «Удалить».</span>
-        <span class="mob">Свайп влево по строке: «В бэклог» и «Удалить».</span>
+        <span class="mob">Меню «⋯» в строке: «В бэклог» и «Удалить».</span>
       </div>
       <div class="add-row split">
         <button class="add-btn" onclick="addEntry('planned')">+ Запланировать</button>
@@ -297,8 +297,8 @@
 </div><!-- /app -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="shared/core.js?v=3"></script>
-<script src="app.js?v=4"></script>
+<script src="shared/core.js?v=4"></script>
+<script src="app.js?v=5"></script>
 <script>
 // Версия с Supabase: общий бюджет с Настей, живая синхронизация между телефонами.
 // Общее с free/ — в shared/core.js, свой интерфейс поверх него — в app.js,

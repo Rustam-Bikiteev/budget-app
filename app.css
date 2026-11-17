@@ -1,8 +1,8 @@
 /* Свой интерфейс версии с Supabase поверх shared/core.css:
-   сводка «Свободно», кошельки, строки трат со свайпом. free/ этот файл не подключает. */
+   сводка «Свободно», кошельки, строки трат с меню действий. free/ этот файл не подключает. */
 
 :root {
-  --muted2: #64748b;
+  --muted2: #475569;
   --red-light: #fee2e2;
   --c-me: #3b82f6;
   --c-nastya: #ec4899;
@@ -79,24 +79,16 @@ header { height: 60px; }
 .thead .r, .tfoot .r { text-align: right; }
 .row-wrap { position: relative; overflow: hidden; border-bottom: 1px solid var(--border); }
 .row-wrap:last-child { border-bottom: none; }
-.swipe-actions { position: absolute; top: 0; bottom: 0; right: 0; display: flex; visibility: hidden; }
-.row-wrap.swiping .swipe-actions { visibility: visible; }
-.swipe-actions button { border: none; color: #fff; font-weight: 700; font-size: 12px; width: 80px; cursor: pointer; font-family: inherit; }
-.sa-back { background: var(--amber); }
-.sa-del { background: var(--red); }
-.sa-plan { background: var(--green); }
 .row {
   display: grid; align-items: center; background: var(--surface);
   position: relative; z-index: 1; transition: transform .2s; touch-action: pan-y; min-height: 46px;
 }
-.row.dragging { transition: none; }
 .r-mand { grid-template-columns: 44px 30px 1fr 110px 38px; }
 .r-plan { grid-template-columns: 30px 1fr 96px 96px 96px 38px 38px; }
 .r-back { grid-template-columns: 30px 1fr 110px 38px 38px; }
 .row .ci { padding: 12px 10px; min-width: 0; }
 .row .ci:focus { background: var(--blue-light); }
 .row .ci.bad { background: var(--red-light); }
-.catdot { width: 16px; height: 16px; border-radius: 50%; margin: 0 auto; border: none; cursor: pointer; display: block; }
 .rem { text-align: right; padding: 0 10px; font-weight: 700; font-size: 13px; }
 .mini-btn {
   width: 30px; height: 30px; margin: 0 auto; display: flex; align-items: center; justify-content: center;
@@ -104,10 +96,6 @@ header { height: 60px; }
   font-family: inherit;
 }
 .mini-btn.del:hover { color: var(--red); background: var(--red-light); }
-.mini-btn.back { color: var(--amber); font-size: 16px; }
-.mini-btn.back:hover { background: var(--amber-light); }
-.mini-btn.plus { color: var(--green); font-size: 20px; }
-.mini-btn.plus:hover { background: var(--green-light); }
 .mini-btn:disabled { color: var(--muted); opacity: .4; cursor: default; background: none; }
 .paid { display: flex; justify-content: center; }
 .paid input { width: 20px; height: 20px; accent-color: var(--green); cursor: pointer; }
@@ -185,7 +173,7 @@ header { height: 60px; }
   font-size: 34px; font-weight: 800; text-align: right; letter-spacing: -.5px;
   min-height: 44px; padding: 0 4px; white-space: nowrap; overflow: hidden;
 }
-.pad-ph { color: #cbd5e1; }
+.pad-ph { color: var(--muted); }
 .pad-preview { text-align: right; font-size: 13px; color: var(--muted2); padding: 0 4px; min-height: 18px; }
 .pad-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
 .pad-chips:empty { display: none; }
@@ -220,10 +208,33 @@ header { height: 60px; }
   .thead > div, .tfoot > div { padding: 8px 4px; }
   .tfoot { font-size: 12px; }
   .mini-btn { width: 28px; }
-  .catdot { width: 14px; height: 14px; }
   .name-cell { flex-direction: column; align-items: stretch; }
   .badge { align-self: flex-start; margin: 0 0 4px 4px; }
   .hint .desk { display: none; }
   .add-row.split { flex-direction: column; }
 }
 @media (min-width: 641px) { .hint .mob { display: none; } }
+
+/* Row actions are visible without swipe. */
+.cloud-category { width: 100%; min-width: 0; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; font: inherit; padding: 6px 2px; }
+.r-mand { grid-template-columns: 44px 86px minmax(0, 1fr) 110px 38px; }
+.r-plan { grid-template-columns: 86px minmax(0, 1fr) 96px 96px 96px 38px 38px; }
+.r-back { grid-template-columns: 86px minmax(0, 1fr) 110px 38px 38px; }
+button.rem { border: 0; background: transparent; font-family: inherit; min-height: 40px; }
+button.rem:disabled { opacity: 1; cursor: default; }
+.row-wrap:has(.row-menu[open]) { overflow: visible; z-index: 5; }
+.row-menu { grid-column: span 2; position: relative; margin: 0 4px; }
+.row-menu summary { cursor: pointer; text-align: center; list-style: none; font-size: 22px; border: 1px solid var(--border); border-radius: 5px; color: var(--text); }
+.row-menu summary::-webkit-details-marker { display: none; }
+.row-menu-items { position: absolute; right: 0; top: 100%; z-index: 10; width: 140px; padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: var(--shadow); }
+.row-menu-items button { display: block; width: 100%; padding: 10px; text-align: left; font: inherit; color: var(--text); background: var(--surface); border: none; cursor: pointer; }
+.row-menu-items button:hover { background: var(--bg); }
+.row-menu-items button:disabled { color: var(--muted); cursor: default; }
+@media (max-width: 640px) {
+  .r-mand { grid-template-columns: 30px 58px minmax(0, 1fr) 68px 30px; }
+  .r-plan { grid-template-columns: 58px minmax(0, 1fr) 50px 50px 50px 22px 22px; }
+  .r-back { grid-template-columns: 58px minmax(0, 1fr) 68px 24px 24px; }
+  .cloud-category { font-size: 12px; }
+}
+
+.section:has(.row-menu[open]) { overflow: visible; }

@@ -1,5 +1,5 @@
 // Свой интерфейс версии с Supabase поверх shared/core.js: главная цифра «Свободно»,
-// кошельки «Я + Общие» и «Насте», оплата обязательных, траты строками со свайпом.
+// кошельки «Я + Общие» и «Насте», оплата обязательных, траты строками с меню действий.
 //
 // Подключается после core.js и до скрипта index.html. Функции с теми же именами,
 // что в core.js (renderSummary, renderPlanned, saveEntry...), заменяют общие:
@@ -110,12 +110,18 @@ function parseSum(str, cur) {
   return Math.round(v * 100) / 100;
 }
 
-function catDot(cat, handler) {
-  const c = catById(cat);
-  return `<button class="catdot" tabindex="-1" style="background:${catColor(cat)}"
-    title="${esc(c ? c.name : '—')}: нажми, чтобы сменить" onclick="${handler}"></button>`;
+function catDot(cat, handler, name) {
+  return `<select class="cloud-category" aria-label="Категория: ${esc(name || 'Без названия')}" onchange="${handler}">
+    ${CAT_ORDER.map(catById).filter(Boolean).map(c => `<option value="${esc(c.id)}" ${c.id === cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+  </select>`;
 }
-const nextCat = cat => CAT_ORDER[(CAT_ORDER.indexOf(cat) + 1) % CAT_ORDER.length];
+function rowActions(id, backlog, name, disabled = '') {
+  return `<details class="row-menu"><summary aria-label="Действия: ${esc(name || 'Без названия')}">⋯</summary>
+    <div class="row-menu-items">
+      <button type="button" onclick="${backlog ? 'moveBacklogEntry' : 'entryToBacklog'}(${id})" ${disabled}>${backlog ? 'В спринт' : 'В бэклог'}</button>
+      <button type="button" onclick="${backlog ? 'deleteBacklogEntry' : 'deleteEntry'}(${id})">Удалить</button>
+    </div></details>`;
+}
 
 // ── расчёт ───────────────────────────────────────────────────────────────────
 
@@ -230,16 +236,16 @@ function renderMandatory() {
     return `
     <div class="row-wrap">
       <div class="row r-mand ${isPaid(e) ? 'is-paid' : ''}" data-eid="${e.id}">
-        ${res ? '<div></div>' : `<label class="paid" title="Оплачено"><input type="checkbox" ${isPaid(e) ? 'checked' : ''} onchange="setPaid(${id},this.checked)"></label>`}
-        ${catDot(e.category, `cycleEntryCat(${id})`)}
+        ${res ? '<div></div>' : `<label class="paid" title="Оплачено"><input aria-label="Оплачено: ${esc(e.name || 'Без названия')}" type="checkbox" ${isPaid(e) ? 'checked' : ''} onchange="setPaid(${id},this.checked)"></label>`}
+        ${catDot(e.category, `cycleEntryCat(${id},this.value)`, e.name)}
         <div class="name-cell">
-          <input class="ci" data-f="name" value="${esc(e.name)}" placeholder="Название"
+          <input class="ci" aria-label="Название: ${esc(e.name || 'Без названия')}" data-f="name" value="${esc(e.name)}" placeholder="Название"
             onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
           ${res ? `<span class="badge reserve" title="Резерв на перерасход">${e.actual ? 'осталось ' + money(reserveLeft(e)) : 'резерв'}</span>` : ''}
         </div>
-        <input class="ci r" ${padAttrs()} data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
+        <input class="ci r" ${padAttrs()} aria-label="План: ${esc(e.name || 'Без названия')}" data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
-        <button class="mini-btn del" tabindex="-1" onclick="deleteEntry(${id})">×</button>
+        <button class="mini-btn del" aria-label="Удалить: ${esc(e.name || 'Без названия')}" onclick="deleteEntry(${id})">×</button>
       </div>
     </div>`;
   }).join('');
@@ -303,29 +309,23 @@ function renderPlanned() {
     const id = idArg(e.id);
     return `
     <div class="row-wrap">
-      <div class="swipe-actions">
-        <button class="sa-back" onclick="entryToBacklog(${id})">В бэклог</button>
-        <button class="sa-del" onclick="deleteEntry(${id})">Удалить</button>
-      </div>
-      <div class="row r-plan" data-eid="${e.id}" data-swipe="160">
-        ${catDot(e.category, `cycleEntryCat(${id})`)}
+      <div class="row r-plan" data-eid="${e.id}">
+        ${catDot(e.category, `cycleEntryCat(${id},this.value)`, e.name)}
         <div class="name-cell">
-          <input class="ci" data-f="name" value="${esc(e.name)}" placeholder="Название"
+          <input class="ci" aria-label="Название: ${esc(e.name || 'Без названия')}" data-f="name" value="${esc(e.name)}" placeholder="Название"
             onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
           <span class="badge ${offPlan(e) ? '' : 'hidden'}">вне плана</span>
         </div>
-        <input class="ci r" ${padAttrs()} data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
+        <input class="ci r" ${padAttrs()} aria-label="План: ${esc(e.name || 'Без названия')}" data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
-        <input class="ci r" ${padAttrs()} data-f="actual" inputmode="tel" value="${e.actual || ''}" placeholder="0"
+        <input class="ci r" ${padAttrs()} aria-label="Факт: ${esc(e.name || 'Без названия')}" data-f="actual" inputmode="tel" value="${e.actual || ''}" placeholder="0"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
-        <div class="rem ${r.cls}" onclick="openCover(${id})">${r.text}</div>
-        <button class="mini-btn back" tabindex="-1" title="В бэклог" onclick="entryToBacklog(${id})">↓</button>
-        <button class="mini-btn del" tabindex="-1" title="Удалить" onclick="deleteEntry(${id})">×</button>
+        <button type="button" class="rem ${r.cls}" aria-label="Остаток: ${esc(e.name || 'Без названия')}. ${esc(r.text)}${e.actual > e.planned ? '. Покрыть перерасход' : ''}" ${e.actual > e.planned ? '' : 'disabled'} onclick="openCover(${id})">${r.text}</button>
+        ${rowActions(id, false, e.name)}
       </div>
     </div>`;
   }).join('');
   renderPlannedTotals();
-  bindSwipes();
 }
 
 function patchPlannedRow(eid) {
@@ -336,6 +336,8 @@ function patchPlannedRow(eid) {
   const rem = row.querySelector('.rem');
   rem.className = `rem ${r.cls}`;
   rem.textContent = r.text;
+  rem.disabled = e.actual <= e.planned;
+  rem.setAttribute('aria-label', `Остаток: ${e.name || 'Без названия'}. ${r.text}${rem.disabled ? '' : '. Покрыть перерасход'}`);
   row.querySelector('.badge').classList.toggle('hidden', !offPlan(e));
   renderPlannedTotals();
 }
@@ -377,10 +379,9 @@ async function saveEntry(eid) {
   else renderMandatoryTotal();
 }
 
-async function cycleEntryCat(eid) {
+async function cycleEntryCat(eid, category) {
   const e = state.entries.find(x => x.id === eid);
   if (!e) return;
-  const category = nextCat(e.category);
   await api.updateEntry(eid, { category });
   e.category = category;
   renderAll();
@@ -442,10 +443,10 @@ function openCover(eid) {
     return `<button type="button" class="cover-opt" ${amt <= 0 ? 'disabled' : ''} onclick="coverFrom('${s.id}')">
       <b>${s.title}</b><span>${sub}</span></button>`;
   }).join('');
-  $('cover-overlay').classList.remove('hidden');
+  openModal($('cover-overlay'));
 }
 
-function closeCover() { $('cover-overlay').classList.add('hidden'); coverId = null; }
+function closeCover() { closeModal($('cover-overlay')); coverId = null; }
 
 async function coverFrom(src) {
   const e = state.entries.find(x => x.id === coverId);
@@ -488,11 +489,11 @@ function openQuick() {
   $('q-names').innerHTML = [...new Set(state.entries.filter(e => e.type === 'planned' && e.name).map(e => e.name))]
     .map(n => `<option value="${esc(n)}">`).join('');
   renderWho();
-  $('sheet-overlay').classList.remove('hidden');
-  setTimeout(() => $('q-sum').focus(), 50);
+  openModal($('sheet-overlay'));
+  $('q-sum').focus();
 }
 
-function closeQuick() { $('sheet-overlay').classList.add('hidden'); }
+function closeQuick() { closeModal($('sheet-overlay')); }
 
 function renderWho() {
   $('q-who').innerHTML = CAT_ORDER.map(catById).filter(Boolean).map(c => `
@@ -523,7 +524,12 @@ async function saveQuick(ev) {
   renderAll();
 }
 
-function onEscape() { closeQuick(); closeCover(); if (pad) closePad(); }
+function onEscape() {
+  const active = activeModal();
+  if (active === $('pad-overlay')) closePad();
+  else if (active === $('sheet-overlay')) closeQuick();
+  else if (active === $('cover-overlay')) closeCover();
+}
 
 // ── бэклог ───────────────────────────────────────────────────────────────────
 
@@ -534,23 +540,16 @@ function renderBacklog() {
     const dis = !state.monthId ? 'disabled' : '';
     return `
     <div class="row-wrap">
-      <div class="swipe-actions">
-        <button class="sa-plan" onclick="moveBacklogEntry(${id})" ${dis}>В спринт</button>
-        <button class="sa-del" onclick="deleteBacklogEntry(${id})">Удалить</button>
-      </div>
-      <div class="row r-back" data-bid="${b.id}" data-swipe="160">
-        ${catDot(b.category, `cycleBacklogCat(${id})`)}
-        <input class="ci" data-f="name" value="${esc(b.name)}" placeholder="Название"
+      <div class="row r-back" data-bid="${b.id}">
+        ${catDot(b.category, `cycleBacklogCat(${id},this.value)`, b.name)}
+        <input class="ci" aria-label="Название: ${esc(b.name || 'Без названия')}" data-f="name" value="${esc(b.name)}" placeholder="Название"
           onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
-        <input class="ci r" ${padAttrs()} data-f="planned" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
+        <input class="ci r" ${padAttrs()} aria-label="План: ${esc(b.name || 'Без названия')}" data-f="planned" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
           onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
-        <button class="mini-btn plus" tabindex="-1" title="Запланировать в этот спринт"
-          onclick="moveBacklogEntry(${id})" ${dis}>+</button>
-        <button class="mini-btn del" tabindex="-1" title="Удалить" onclick="deleteBacklogEntry(${id})">×</button>
+        ${rowActions(id, true, b.name, dis)}
       </div>
     </div>`;
   }).join('');
-  bindSwipes();
 }
 
 async function saveBacklogEntry(bid) {
@@ -567,10 +566,9 @@ async function saveBacklogEntry(bid) {
   renderBacklogTotal();
 }
 
-async function cycleBacklogCat(bid) {
+async function cycleBacklogCat(bid, category) {
   const item = state.backlog.find(b => b.id === bid);
   if (!item) return;
-  const category = nextCat(item.category);
   await api.updateBacklog(bid, { category });
   item.category = category;
   renderBacklog();
@@ -591,66 +589,12 @@ function confirmLogout() {
   openConfirm('Выйти из аккаунта?', 'Чтобы зайти снова, понадобятся почта и пароль.', 'Выйти', doLogout);
 }
 
-// ── свайп влево открывает действия строки; кнопки в строке остаются ──────────
-
-function bindSwipes() {
-  document.querySelectorAll('.row[data-swipe]').forEach(row => {
-    if (row._swipe) return;
-    row._swipe = true;
-    const max = +row.dataset.swipe;
-    let x0 = null, y0 = 0, dx = 0, open = false, axis = null;
-    row.addEventListener('pointerdown', e => {
-      if (e.pointerType === 'mouse' && e.target.closest('button, input')) return;
-      open = !!row.style.transform;   // соседний свайп мог закрыть эту строку
-      x0 = e.clientX; y0 = e.clientY; dx = open ? -max : 0; axis = null;
-    });
-    row.addEventListener('pointermove', e => {
-      if (x0 === null) return;
-      const mx = e.clientX - x0, my = e.clientY - y0;
-      if (axis === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) {
-        axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
-        if (axis === 'x') {
-          row.setPointerCapture(e.pointerId);
-          if (document.activeElement && row.contains(document.activeElement)) document.activeElement.blur();
-        }
-      }
-      if (axis !== 'x') return;
-      row.classList.add('dragging');
-      row.parentElement.classList.add('swiping');
-      dx = Math.min(0, Math.max(-max - 30, mx + (open ? -max : 0)));
-      row.style.transform = `translateX(${dx}px)`;
-    });
-    const end = () => {
-      if (x0 === null) return;
-      x0 = null;
-      row.classList.remove('dragging');
-      if (axis !== 'x') return;
-      row.style.transform = dx < -max / 2 ? `translateX(${-max}px)` : '';
-      if (row.style.transform) closeOtherSwipes(row);
-      else hideActionsAfterSlide(row);
-    };
-    row.addEventListener('pointerup', end);
-    row.addEventListener('pointercancel', end);
-  });
-}
-
-function closeOtherSwipes(keep) {
-  document.querySelectorAll('.row[data-swipe]').forEach(r => {
-    if (r !== keep && r.style.transform) { r.style.transform = ''; hideActionsAfterSlide(r); }
-  });
-}
-
-// кнопки под строкой прячем, когда она доехала обратно, иначе край просвечивает
-function hideActionsAfterSlide(row) {
-  setTimeout(() => { if (!row.style.transform) row.parentElement.classList.remove('swiping'); }, 220);
-}
-
 // ── цифровая панель для сумм на телефоне ────────────────────────────────────
 // Вместо системной клавиатуры: + и − рядом с цифрами, подсказки по плану,
 // переключение План/Факт без закрытия. На компьютере поля печатаются как обычно.
 
 const touchUI = () => window.matchMedia('(pointer: coarse)').matches;
-function padAttrs() { return touchUI() ? 'readonly onclick="openPad(this)"' : 'inputmode="decimal"'; }
+function padAttrs() { return touchUI() ? `readonly onclick="openPad(this)" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPad(this); }"` : 'inputmode="decimal"'; }
 
 let pad = null;   // { kind: 'entry'|'backlog', id, field, expr }
 
@@ -662,16 +606,16 @@ const padOld = () => { const it = padItem(); return it ? it[pad.field] : 0; };
 function openPad(inp) {
   const row = inp.closest('.row');
   if (!row) return;
-  inp.blur();
+  inp.focus();
   const kind = row.dataset.eid ? 'entry' : 'backlog';
   const raw = row.dataset.eid || row.dataset.bid;
   const id = /^\d+$/.test(raw) ? Number(raw) : raw;
   pad = { kind, id, field: inp.dataset.f, expr: '' };
   renderPad();
-  $('pad-overlay').classList.remove('hidden');
+  openModal($('pad-overlay'));
 }
 
-function closePad() { $('pad-overlay').classList.add('hidden'); pad = null; }
+function closePad() { closeModal($('pad-overlay')); pad = null; }
 
 // четверть суммы, округлённая до круглого: до 1000 — до сотен, до 10К — до 500, дальше — до тысяч
 function roundNice(x) {
@@ -756,5 +700,5 @@ document.addEventListener('keydown', e => {
   if (!pad) return;
   if (/^\d$/.test(e.key) || e.key === '+' || e.key === '-') padKey(e.key);
   else if (e.key === 'Backspace') padKey('back');
-  else if (e.key === 'Enter') padDone();
+  else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); padDone(); }
 });

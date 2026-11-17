@@ -464,7 +464,9 @@ let confirmCallback = null;
 const modalFocus = new WeakMap();
 
 function activeModal() {
-  return [$('confirm-overlay'), $('settings-overlay')].find(el => el && !el.classList.contains('hidden'));
+  const confirm = $('confirm-overlay');
+  if (confirm && !confirm.classList.contains('hidden')) return confirm;
+  return [...document.querySelectorAll('.modal-overlay')].reverse().find(el => !el.classList.contains('hidden'));
 }
 
 function updateModalBackground() {
@@ -478,14 +480,16 @@ function openModal(overlay) {
   modalFocus.set(overlay, document.activeElement);
   overlay.classList.remove('hidden');
   updateModalBackground();
-  overlay.querySelector('button, [tabindex="-1"]').focus();
+  const first = overlay.querySelector('input:not([disabled]), button:not([disabled]), [tabindex="-1"]');
+  if (first) first.focus();
 }
 
 function closeModal(overlay) {
+  if (overlay.classList.contains('hidden')) return;
   overlay.classList.add('hidden');
   updateModalBackground();
   const previous = modalFocus.get(overlay);
-  if (previous && previous.isConnected) previous.focus();
+  if (previous && previous.isConnected && !previous.closest('[inert]')) previous.focus();
 }
 
 document.addEventListener('keydown', e => {

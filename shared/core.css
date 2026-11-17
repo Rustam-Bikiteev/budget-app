@@ -6,14 +6,14 @@
   --surface: #ffffff;
   --border: #e2e8f0;
   --text: #0f172a;
-  --muted: #94a3b8;
-  --blue: #3b82f6;
+  --muted: #475569;
+  --blue: #1d4ed8;
   --blue-light: #eff6ff;
-  --green: #10b981;
+  --green: #047857;
   --green-light: #f0fdf4;
-  --amber: #f59e0b;
+  --amber: #92400e;
   --amber-light: #fffbeb;
-  --red: #ef4444;
+  --red: #b91c1c;
   --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -121,7 +121,7 @@ main {
   letter-spacing: -.5px;
 }
 .s-card.accent { background: var(--blue); }
-.s-card.accent .s-card-label { color: rgba(255,255,255,.65); }
+.s-card.accent .s-card-label { color: #fff; }
 .s-card.accent .s-card-val  { color: #fff; }
 .s-card.accent.red-accent { background: var(--red); }
 .s-card.allowed .s-card-val { color: var(--blue); }
@@ -216,7 +216,7 @@ td.col-num { cursor: text; }
   font-size: 12px; font-weight: 700; font-family: inherit;
   cursor: pointer; padding: 9px 8px; width: 100%;
   -webkit-appearance: none; appearance: none;
-  color: var(--cat, var(--muted));
+  color: var(--text);
   text-overflow: ellipsis;
 }
 .cat-sel:focus { outline: none; }
@@ -274,7 +274,7 @@ td.col-num { cursor: text; }
   font-family: inherit; transition: all .12s;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.cat-tab.active { background: var(--cat); border-color: var(--cat); color: #fff; }
+.cat-tab.active { background: var(--text); border-color: var(--cat); color: #fff; }
 
 /* buttons */
 .btn-primary {
@@ -407,7 +407,7 @@ td.col-num { cursor: text; }
   border-radius: 4px; line-height: 30px; text-align: center;
   transition: color .12s, background .12s;
 }
-.tobacklog-btn:hover { background: var(--amber-light); color: #d97706; }
+.tobacklog-btn:hover { background: var(--amber-light); color: #92400e; }
 
 /* ── Mobile ── */
 @media (max-width: 640px) {
@@ -466,3 +466,7 @@ td.col-num { cursor: text; }
   .free-app .nav-btn, .free-app .month-label-btn, .free-app .cal-year-btn { min-height: 44px; }
   .free-app .cat-sel { width: 32px; height: 32px; }
 }
+
+:where(button, select, input, summary, a):focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+input::placeholder { color: var(--muted); opacity: 1; }
