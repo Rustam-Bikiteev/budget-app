@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="shared/core.css?v=4">
-<link rel="stylesheet" href="app.css?v=5">
+<link rel="stylesheet" href="app.css?v=6">
 <style>
 /* своё у версии с Supabase; общий интерфейс в shared/core.css */
 .logout-btn, .refresh-btn {
@@ -268,7 +268,7 @@
       <div class="hint">
         В «Факт» можно писать <code>1200+800</code>, <code>+500</code> или <code>−300</code> (прибавится к текущему или вычтется).
         <span class="desk">Строку можно утащить мышкой влево: «В бэклог» и «Удалить».</span>
-        <span class="mob">Меню «⋯» в строке: «В бэклог» и «Удалить».</span>
+        <span class="mob">Стрелка ↓ переносит в бэклог, × удаляет после подтверждения.</span>
       </div>
       <div class="add-row split">
         <button class="add-btn" onclick="addEntry('planned')">+ Запланировать</button>
@@ -298,7 +298,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="shared/core.js?v=4"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 <script>
 // Версия с Supabase: общий бюджет с Настей, живая синхронизация между телефонами.
 // Общее с free/ — в shared/core.js, свой интерфейс поверх него — в app.js,

@@ -111,16 +111,24 @@ function parseSum(str, cur) {
 }
 
 function catDot(cat, handler, name) {
-  return `<select class="cloud-category" aria-label="Категория: ${esc(name || 'Без названия')}" onchange="${handler}">
+  return `<select class="cloud-category" style="--cat:${catColor(cat)}" title="${esc(catById(cat)?.name || 'Категория')}" aria-label="Категория: ${esc(name || 'Без названия')}" onchange="${handler}">
     ${CAT_ORDER.map(catById).filter(Boolean).map(c => `<option value="${esc(c.id)}" ${c.id === cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
   </select>`;
 }
 function rowActions(id, backlog, name, disabled = '') {
-  return `<details class="row-menu"><summary aria-label="Действия: ${esc(name || 'Без названия')}">⋯</summary>
-    <div class="row-menu-items">
-      <button type="button" onclick="${backlog ? 'moveBacklogEntry' : 'entryToBacklog'}(${id})" ${disabled}>${backlog ? 'В спринт' : 'В бэклог'}</button>
-      <button type="button" onclick="${backlog ? 'deleteBacklogEntry' : 'deleteEntry'}(${id})">Удалить</button>
-    </div></details>`;
+  const label = esc(name || 'Без названия');
+  return `<button type="button" class="mini-btn back" aria-label="${backlog ? 'В спринт' : 'В бэклог'}: ${label}" title="${backlog ? 'В спринт' : 'В бэклог'}"
+      onclick="${backlog ? 'moveBacklogEntry' : 'entryToBacklog'}(${id})" ${disabled}>${backlog ? '↑' : '↓'}</button>
+    <button type="button" class="mini-btn del" aria-label="Удалить: ${label}" title="Удалить"
+      onclick="${backlog ? 'deleteBacklogEntry' : 'deleteEntry'}(${id})">×</button>`;
+}
+
+function followCategoryRow(kind, id) {
+  const row = [...document.querySelectorAll(`.row[data-${kind}]`)].find(el => el.dataset[kind] === String(id));
+  if (!row) return;
+  row.querySelector('.cloud-category')?.focus({ preventScroll: true });
+  row.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
+  row.classList.add('category-moved');
 }
 
 // ── расчёт ───────────────────────────────────────────────────────────────────
@@ -382,9 +390,16 @@ async function saveEntry(eid) {
 async function cycleEntryCat(eid, category) {
   const e = state.entries.find(x => x.id === eid);
   if (!e) return;
+  const monthId = state.monthId;
   await api.updateEntry(eid, { category });
   e.category = category;
+  if (state.monthId !== monthId) return;
+  if (e.type === 'planned' && state.catFilter !== 'all' && state.catFilter !== category) {
+    state.catFilter = 'all';
+    renderTabs();
+  }
   renderAll();
+  followCategoryRow('eid', eid);
   flash('Категория: ' + catById(category).name);
 }
 
@@ -572,6 +587,7 @@ async function cycleBacklogCat(bid, category) {
   await api.updateBacklog(bid, { category });
   item.category = category;
   renderBacklog();
+  followCategoryRow('bid', bid);
 }
 
 async function addBacklogEntry() {
