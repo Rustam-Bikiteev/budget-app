@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Бюджет · варианты дизайна</title>
+  <link rel="stylesheet" href="lab.css">
+  <script src="lab.js" defer></script>
+</head>
+<body>
+  <div class="lab-bar">
+    <a class="lab-brand" href="./" aria-label="Варианты дизайна бюджета"><span class="brand-icon">б.</span><span>Бюджет <small>Дизайн-студия</small></span></a>
+    <nav class="themes" aria-label="Вариант дизайна">
+      <button data-theme="coral" aria-pressed="true"><i></i><span>Коралл</span></button>
+      <button data-theme="lime" aria-pressed="false"><i></i><span>Лайм</span></button>
+      <button data-theme="lilac" aria-pressed="false"><i></i><span>Лаванда</span></button>
+      <button data-theme="pastel" aria-pressed="false"><i></i><span>Пастель</span></button>
+    </nav>
+    <div class="viewport-controls" role="group" aria-label="Размер экрана">
+      <button data-view="desktop" aria-pressed="true" title="Компьютер">Компьютер</button>
+      <button data-view="mobile" aria-pressed="false" title="Телефон">Телефон</button>
+    </div>
+  </div>
+  <div class="lab-tools">
+    <p><b id="theme-title">Коралл</b><span id="theme-note">Графит, ледяные поверхности и коралловый акцент</span></p>
+    <div>
+      <label for="screen">Экран</label>
+      <select id="screen">
+        <option value="budget">Бюджет</option>
+        <option value="payments">Платежи</option>
+        <option value="planned">Траты спринта</option>
+        <option value="analytics">Аналитика</option>
+        <option value="parameters">Параметры бюджета</option>
+        <option value="quick">Расход вне плана</option>
+        <option value="pad">Ввод суммы</option>
+        <option value="cover">Покрытие перерасхода</option>
+        <option value="confirm">Подтверждение удаления</option>
+        <option value="calendar">Выбор периода</option>
+        <option value="backlog">Бэклог</option>
+        <option value="empty">Пустой спринт</option>
+        <option value="login">Вход</option>
+      </select>
+      <button id="reset" title="Сбросить тестовые изменения">Сбросить</button>
+      <a id="standalone" href="preview.html?theme=coral" target="_blank" rel="noopener">Открыть отдельно</a>
+    </div>
+  </div>
+  <div class="lab-stage" data-view="desktop">
+    <iframe id="preview" title="Рабочий тестовый бюджет" src="preview.html?theme=coral"></iframe>
+  </div>
+  <footer class="lab-footer">Тестовые данные · изменения хранятся только до перезагрузки · рабочий бюджет не затрагивается</footer>
+</body>
+</html>

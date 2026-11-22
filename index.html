@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="lilac">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Бюджет</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#3b82f6">
+<meta name="theme-color" content="#aaa0d0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Бюджет">
@@ -55,6 +55,8 @@
 .login-box input:focus { outline: none; border-color: var(--blue); }
 .login-err { color: var(--red); font-size: 13px; text-align: center; min-height: 18px; }
 </style>
+<link rel="stylesheet" href="ui/base.css?v=1">
+<link rel="stylesheet" href="ui/lilac.css?v=1">
 </head>
 <body>
 
@@ -76,7 +78,7 @@
 <header>
   <h1>Бюджет</h1>
   <div class="month-nav">
-    <button class="nav-btn" onclick="shiftMonth(-1)">‹</button>
+    <button class="nav-btn" aria-label="Предыдущий спринт" onclick="shiftMonth(-1)">‹</button>
     <div class="cal-wrapper">
       <button id="month-label" class="month-label-btn period" onclick="toggleCalendar(event)">
         <span class="period-text"><b id="month-label-text"></b><span id="period-sub"></span></span>
@@ -91,7 +93,7 @@
         <div id="cal-months-grid" class="cal-months"></div>
       </div>
     </div>
-    <button class="nav-btn" onclick="shiftMonth(1)">›</button>
+    <button class="nav-btn" aria-label="Следующий спринт" onclick="shiftMonth(1)">›</button>
   </div>
   <div class="header-actions">
     <button class="refresh-btn" id="refresh-btn" title="Обновить данные" onclick="refreshData()"><span>⟳</span></button>
@@ -284,6 +286,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="shared/core.js?v=4"></script>
 <script src="app.js?v=8"></script>
+<script src="ui/lilac.js?v=1"></script>
 <script>
 // Версия с Supabase: общий бюджет с Настей, живая синхронизация между телефонами.
 // Общее с free/ — в shared/core.js, свой интерфейс поверх него — в app.js,
