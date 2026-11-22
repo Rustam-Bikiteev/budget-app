@@ -4,7 +4,6 @@ const lilacIcons={
   check:'<rect x="4" y="4" width="16" height="16" rx="1"/><path d="m8 12 3 3 5-6"/>',
   grid:'<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
   chart:'<path d="M3 21h18M5 21V11h4v10m2 0V6h4v15m2 0V2h4v19"/>',
-  plus:'<path d="M12 4v16M4 12h16"/>',
   back:'<path d="m14 5-7 7 7 7"/>',
   arrow:'<path d="M6 18 18 6M6 6h12v12"/>',
   calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18m-13 4h2m4 0h2m-8 3h2m4 0h2"/>',
@@ -21,7 +20,7 @@ if(lilacLogin&&!lilacLogin.querySelector('.login-brand')){
 }
 const lilacTop=document.createElement('div');
 lilacTop.className='lilac-only lilac-topbar';
-lilacTop.innerHTML=`<button class="lilac-profile" onclick="lilacBack()" aria-label="Главная"><span>Р</span>${lilacSVG('back')}</button><span class="lilac-page-title"></span><div class="lilac-top-actions"><button class="lilac-add" aria-label="Добавить расход" onclick="openQuick()">${lilacSVG('plus')}</button><button class="lilac-calendar" aria-label="Выбрать спринт" onclick="toggleCalendar(event)">${lilacSVG('calendar')}</button></div>`;
+lilacTop.innerHTML=`<button class="lilac-profile" onclick="lilacBack()" aria-label="Главная"><span>Р</span>${lilacSVG('back')}</button><span class="lilac-page-title"></span><div class="lilac-top-actions"><button class="lilac-calendar" aria-label="Выбрать спринт" onclick="toggleCalendar(event)">${lilacSVG('calendar')}</button></div>`;
 $('app').prepend(lilacTop);
 const lilacMain=document.querySelector('main');
 const lilacOverview=document.createElement('section');lilacOverview.className='lilac-only lilac-overview';
@@ -57,11 +56,15 @@ const lilacOriginalHeaderActions=document.querySelector('.header-actions');
 const lilacHeaderButtons=[...lilacOriginalHeaderActions.children];
 for(const row of lilacAccount.querySelectorAll('.lilac-account-action'))row.addEventListener('click',event=>{if(!event.target.closest('button'))row.querySelector('button')?.click();});
 const lilacNav=document.createElement('nav');lilacNav.className='lilac-only lilac-bottom-nav';lilacNav.setAttribute('aria-label','Разделы бюджета');
-lilacNav.innerHTML=[['home','home','Главная'],['payments','check','Платежи'],['backlog','grid','Бэклог'],['analytics','chart','Аналитика']].map(([route,icon,title])=>`<button data-page="${route}" title="${title}" aria-label="${title}" onclick="lilacRoute('${route}')">${lilacSVG(icon)}</button>`).join('');
+lilacNav.innerHTML=[['home','home','Главная'],['payments','check','Платежи'],['planned','swap','Траты'],['backlog','grid','Бэклог'],['analytics','chart','Бюджет']].map(([route,icon,title])=>`<button data-page="${route}" title="${title}" aria-label="${title}" onclick="lilacRoute('${route}')">${lilacSVG(icon)}<span>${title}</span></button>`).join('');
 $('app').append(lilacNav);
 document.querySelector('#budget-view>.section:nth-child(2)').dataset.lilacPanel='payments';
 document.querySelector('#budget-view>.section:nth-child(4)').dataset.lilacPanel='planned';
 document.querySelector('.backlog-header').closest('.section').dataset.lilacPanel='backlog';
+const lilacBudgetChart=$('budget-disclosure');
+const lilacSpendingChart=$('spending-disclosure');
+const lilacBudgetHome=lilacBudgetChart.parentElement;
+const lilacSpendingHome=lilacSpendingChart.parentElement;
 
 function lilacRoute(page){
   if(!['home','payments','planned','analytics','backlog','account'].includes(page))page='home';
@@ -82,6 +85,8 @@ function lilacTheme(theme){
   const fields=document.querySelector('.budget-fields');
   if(theme==='lilac'){
     $('lilac-budget-editor').append(fields);lilacRoute(lilacPage);
+    lilacAnalytics.querySelector('h2').after(lilacBudgetChart);
+    document.querySelector('[data-lilac-panel=planned] .section-header').after(lilacSpendingChart);
     for(const button of lilacHeaderButtons)lilacAccount.querySelector(`[data-account-action="${button.classList.contains('refresh-btn')?'refresh':'logout'}"]`).append(button);
     lilacOperatorMenu.querySelector('.lilac-operator-chips').append($('pad-chips'));
     lilacOperatorMenu.querySelector('.lilac-operator-info').append($('pad-preview'));
@@ -89,6 +94,8 @@ function lilacTheme(theme){
     $('pad-ok').textContent='Сохранить сумму';
   }else{
     document.querySelector('#budget-view>.hero:first-child').append(fields);
+    lilacBudgetHome.prepend(lilacBudgetChart);
+    lilacSpendingHome.append(lilacSpendingChart);
     for(const button of lilacHeaderButtons)lilacOriginalHeaderActions.append(button);
     document.querySelector('.pad-keys').before($('pad-chips'));
     $('pad-display').after($('pad-preview'));
@@ -99,6 +106,8 @@ function lilacTheme(theme){
 function lilacPercent(value,total){return total>0?Math.round(value/total*100):0;}
 function lilacRender(){
   const k=calc();
+  $('expense-fab').disabled=!state.monthId;
+  $('expense-fab').title=state.monthId?'Добавить трату':'Сначала создайте бюджет спринта';
   const set=(id,value)=>$(id).textContent=value;
   set('lilac-free',money(k.free));set('lilac-income',`Доход ${money(state.income)}`);
   set('lilac-free-share',`${lilacPercent(k.free,state.income)}% дохода`);
@@ -162,6 +171,7 @@ renderPad=function(){lilacNativePad();lilacRenderPad();};
 const lilacNativeLoad=loadCurrentMonth;
 loadCurrentMonth=async function(){await lilacNativeLoad();lilacRender();};
 const lilacNativeModalBackground=updateModalBackground;
-updateModalBackground=function(){lilacNativeModalBackground();const active=!!activeModal();lilacTop.inert=active;lilacNav.inert=active;};
+updateModalBackground=function(){lilacNativeModalBackground();const active=!!activeModal();lilacTop.inert=active;lilacNav.inert=active;$('expense-fab').inert=active;};
 lilacRoute('home');
 lilacTheme(document.documentElement.dataset.theme);
+initPullToRefresh();

@@ -135,6 +135,7 @@ function calc() {
 function renderSummary() {
   const k = calc();
 
+  $('h-income').textContent = money(state.income);
   $('h-free').textContent = money(k.free);
   $('h-free').classList.toggle('neg', k.free < 0);
   $('h-free-label').textContent = k.free < 0 ? 'Дефицит' : 'Свободно';
@@ -143,14 +144,14 @@ function renderSummary() {
 
   renderBudgetChart('h-ring', 'h-legend', [
     { label: 'Обязательные', value: k.mand, color: '#64748b' },
-    { label: 'Отложить', value: state.saved, color: '#7c3aed' },
+    { label: 'Отложено', value: state.saved, color: '#7c3aed' },
     { label: 'Запланировано', value: k.allocated, color: 'var(--blue)' },
-    { label: 'Свободно', value: Math.max(0, k.free), color: 'var(--green)' },
+    { label: k.free < 0 ? 'Дефицит' : 'Свободно', value: k.free, color: k.free < 0 ? 'var(--red)' : 'var(--green)' },
   ], `Распределение бюджета${k.free < 0 ? `. Дефицит: ${money(-k.free)}` : ''}`);
 
   renderBudgetChart('h-spending-ring', 'h-spending-legend', [
     { label: 'Потрачено', value: k.spent, color: 'var(--blue)' },
-    { label: 'Осталось потратить', value: k.allocated - k.spent, color: '#93c5fd' },
+    { label: 'Осталось', value: k.allocated - k.spent, color: '#93c5fd' },
   ], 'Запланированные траты');
 }
 
@@ -242,6 +243,23 @@ function remInfo(e) {
 }
 const offPlan = e => e.planned === 0 && e.actual > 0;
 
+function entryProgress(e) {
+  const remaining = Math.max(0, e.planned - e.actual);
+  const total = remaining > 0 ? e.planned + e.actual + remaining : Math.max(e.planned, e.actual, 1);
+  const plan = remaining > 0 ? e.planned / total * 100 : 0;
+  const within = Math.max(0, Math.min(e.planned, e.actual)) / total * 100;
+  const over = Math.max(0, e.actual - e.planned) / total * 100;
+  const left = remaining / total * 100;
+  return `<div class="entry-progress" role="img" aria-label="План: ${money(e.planned)}. Факт: ${money(e.actual)}. Осталось: ${money(e.planned - e.actual)}" title="${esc(e.name || 'Трата')}: ${money(e.actual)} из ${money(e.planned)}">
+    <i class="progress-plan" style="width:${plan}%"></i><i class="progress-actual" style="width:${within}%"></i><i class="progress-over" style="width:${over}%"></i><i class="progress-left" style="width:${left}%"></i>
+  </div>`;
+}
+
+function remainingText(e) {
+  const r = remInfo(e);
+  return `<span class="remaining-full">${r.text}</span><span class="remaining-short">${e.planned || e.actual ? fmtK(e.planned - e.actual) : '—'}</span>`;
+}
+
 function renderPlannedTotals() {
   const { filtered, totPlan, totActual, totRem } = plannedTotals();
   $('planned-total').textContent = filtered.length ? `потрачено ${money(totActual)} из ${money(totPlan)}` : '';
@@ -271,9 +289,10 @@ function renderPlanned() {
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
         <input class="ci r" ${padAttrs()} aria-label="Факт: ${esc(e.name || 'Без названия')}" data-f="actual" inputmode="tel" value="${e.actual || ''}" placeholder="0"
           onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
-        <button type="button" class="rem ${r.cls}" aria-label="Остаток: ${esc(e.name || 'Без названия')}. ${esc(r.text)}${e.actual > e.planned ? '. Покрыть перерасход' : ''}" ${e.actual > e.planned ? '' : 'disabled'} onclick="openCover(${id})">${r.text}</button>
+        <button type="button" class="rem ${r.cls}" title="Осталось: ${r.text}" aria-label="Остаток: ${esc(e.name || 'Без названия')}. ${esc(r.text)}${e.actual > e.planned ? '. Покрыть перерасход' : ''}" ${e.actual > e.planned ? '' : 'disabled'} onclick="openCover(${id})">${remainingText(e)}</button>
         ${rowActions(id, false, e.name)}
       </div>
+      ${entryProgress(e)}
     </div>`;
   }).join('');
   renderPlannedTotals();
@@ -286,10 +305,12 @@ function patchPlannedRow(eid) {
   const r = remInfo(e);
   const rem = row.querySelector('.rem');
   rem.className = `rem ${r.cls}`;
-  rem.textContent = r.text;
+  rem.innerHTML = remainingText(e);
+  rem.title = `Осталось: ${r.text}`;
   rem.disabled = e.actual <= e.planned;
   rem.setAttribute('aria-label', `Остаток: ${e.name || 'Без названия'}. ${r.text}${rem.disabled ? '' : '. Покрыть перерасход'}`);
   row.querySelector('.badge').classList.toggle('hidden', !offPlan(e));
+  row.parentElement.querySelector('.entry-progress').outerHTML = entryProgress(e);
   renderPlannedTotals();
 }
 
@@ -438,20 +459,102 @@ async function coverFrom(src) {
 // ── потратил вне плана ───────────────────────────────────────────────────────
 
 let quickCat = 'shared';
+let quickMonthId = null;
+let quickSaving = false;
+let quickBlocked = false;
 
-function openQuick() {
-  if (!state.monthId) return;
+function quickSources() {
+  return [{ id: 'free', title: 'Из свободных', avail: Math.max(0, calc().free) }, ...coverSources()];
+}
+
+function updateQuickSource() {
+  const outsidePlan = $('q-offplan').checked;
+  $('q-source-fields').classList.toggle('hidden', !outsidePlan);
+  $('q-actual-field').classList.toggle('hidden', outsidePlan);
+  $('q-sum-label').textContent = outsidePlan ? 'Сумма, ₽' : 'План, ₽';
+  $('q-note').textContent = outsidePlan ? 'Сумма добавится к плану и факту выбранной траты.' : 'Новая запись появится в тратах.';
+  const source = quickSources().find(s => s.id === $('q-source').value);
+  const amount = parseSum($('q-sum').value, 0);
+  const shortage = source && amount > 0 ? Math.max(0, amount - source.avail) : 0;
+  $('q-source-note').textContent = outsidePlan && shortage
+    ? source.id === 'free' ? `Не хватает ${money(shortage)}: появится дефицит.` : `Не хватает ${money(shortage)}. Выбери другой источник.`
+    : '';
+  $('q-save').disabled = quickSaving || quickBlocked || (outsidePlan && (!source || (source.id !== 'free' && shortage > 0)));
+}
+
+function openQuick(outsidePlan = false) {
+  if (!state.monthId || quickSaving) return;
+  quickMonthId = state.monthId;
   quickCat = state.catFilter !== 'all' ? state.catFilter : 'shared';
   $('q-sum').value = '';
+  $('q-actual').value = '';
+  $('q-offplan').checked = outsidePlan;
   $('q-name').value = '';
+  if (!quickBlocked) $('q-error').textContent = '';
+  $('q-source').innerHTML = quickSources().map(s =>
+    `<option value="${s.id}" ${s.id !== 'free' && s.avail <= 0 ? 'disabled' : ''}>${s.title} · ${money(s.avail)}</option>`
+  ).join('');
+  $('q-source').value = 'free';
+  updateQuickSource();
   $('q-names').innerHTML = [...new Set(state.entries.filter(e => e.type === 'planned' && e.name).map(e => e.name))]
     .map(n => `<option value="${esc(n)}">`).join('');
   renderWho();
   openModal($('sheet-overlay'));
-  $('q-sum').focus();
+  $('q-name').focus();
 }
 
-function closeQuick() { closeModal($('sheet-overlay')); }
+function closeQuick() { if (!quickSaving) closeModal($('sheet-overlay')); }
+
+function initPullToRefresh() {
+  const indicator = $('pull-refresh');
+  const label = $('pull-refresh-text');
+  const threshold = 72;
+  let start = null;
+  let distance = 0;
+  let refreshing = false;
+  const reset = () => {
+    start = null;
+    distance = 0;
+    delete indicator.dataset.state;
+    indicator.style.removeProperty('--pull');
+    label.textContent = '';
+  };
+  document.addEventListener('touchstart', event => {
+    if (refreshing) return;
+    reset();
+    if (window.scrollY > 0 || event.touches.length !== 1 || activeModal() || isEditing()
+      || $('app').classList.contains('hidden') || $('refresh-btn').disabled
+      || event.target.closest('input,select,textarea,button,a,summary,[contenteditable]')) return;
+    start = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    distance = 0;
+  }, { passive: true });
+  document.addEventListener('touchmove', event => {
+    if (!start || refreshing) return;
+    if (event.touches.length !== 1 || activeModal() || window.scrollY > 0) { reset(); return; }
+    const dx = event.touches[0].clientX - start.x;
+    const dy = event.touches[0].clientY - start.y;
+    if (dy < 0 || Math.abs(dx) > Math.abs(dy)) { reset(); return; }
+    if (dy <= 8) return;
+    if (event.cancelable) event.preventDefault();
+    distance = Math.min(100, dy * .55);
+    indicator.style.setProperty('--pull', `${distance}px`);
+    indicator.dataset.state = distance >= threshold ? 'ready' : 'pulling';
+    label.textContent = distance >= threshold ? 'Отпустите, чтобы обновить' : 'Потяните для обновления';
+  }, { passive: false });
+  document.addEventListener('touchcancel', () => { if (!refreshing) reset(); }, { passive: true });
+  document.addEventListener('touchend', async event => {
+    if (!start || refreshing) return;
+    if (event.touches.length || activeModal() || isEditing() || window.scrollY > 0) { reset(); return; }
+    start = null;
+    if (distance < threshold) { reset(); return; }
+    refreshing = true;
+    indicator.dataset.state = 'refreshing';
+    label.textContent = 'Обновляю…';
+    try { await refreshData(); }
+    catch { flash('Не удалось обновить. Потяните ещё раз.'); }
+    finally { refreshing = false; reset(); }
+  }, { passive: true });
+}
 
 function renderWho() {
   $('q-who').innerHTML = CAT_ORDER.map(catById).filter(Boolean).map(c => `
@@ -461,25 +564,75 @@ function renderWho() {
 
 async function saveQuick(ev) {
   ev.preventDefault();
+  if (quickSaving || quickBlocked) return;
+  if (!quickMonthId || state.monthId !== quickMonthId) { closeQuick(); return; }
+  const outsidePlan = $('q-offplan').checked;
   const v = parseSum($('q-sum').value, 0);
-  if (!v) { $('q-sum').focus(); return; }
+  const actual = outsidePlan ? v : parseSum($('q-actual').value, 0);
+  if (v === null || v < 0 || (outsidePlan && v === 0)) { $('q-sum').focus(); return; }
+  if (actual === null || actual < 0) { $('q-actual').focus(); return; }
+  const source = outsidePlan ? quickSources().find(s => s.id === $('q-source').value) : { id: 'free' };
+  if (!source || (source.id !== 'free' && source.avail < v)) { updateQuickSource(); return; }
+  const monthId = quickMonthId;
   const name = $('q-name').value.trim() || 'Без названия';
-  const ex = state.entries.find(e => e.type === 'planned' && e.category === quickCat
+  const ex = outsidePlan && state.entries.find(e => e.type === 'planned' && e.category === quickCat
     && e.name.trim().toLowerCase() === name.toLowerCase());
-  if (ex) {
-    const actual = ex.actual + v;
-    await api.updateEntry(ex.id, { actual });
-    ex.actual = actual;
-    flash(`${ex.name}: +${money(v)} к факту`);
-  } else {
-    const entry = await api.createEntry({
-      month_id: state.monthId, type: 'planned', category: quickCat, name, planned: 0, actual: v,
-    });
-    upsert(state.entries, entry);
-    flash('Записано вне плана');
+  const category = quickCat;
+  const patch = outsidePlan ? { planned: (ex ? used(ex) : 0) + v, actual: (ex ? ex.actual : 0) + v } : { planned: v, actual };
+  const reserve = source.id === 'reserve' ? reserveRow() : null;
+  const before = source.id === 'saved' ? state.saved : reserve ? reserve.actual : 0;
+  const after = source.id === 'saved' ? before - v : before + v;
+  const writeSource = value => source.id === 'saved'
+    ? api.updateMonth(monthId, { saved: value }) : api.updateEntry(reserve.id, { actual: value });
+  const applySource = (value = after) => {
+    if (source.id === 'saved') {
+      const row = state.allMonths.find(m => m.id === monthId);
+      if (row) upsert(state.allMonths, { ...row, saved: value });
+      if (state.monthId === monthId) { state.saved = value; $('saved-inp').value = value || ''; }
+    } else if (reserve && state.monthId === monthId) {
+      const row = state.entries.find(e => e.id === reserve.id);
+      if (row) row.actual = value;
+    }
+  };
+  const controls = [...$('sheet-overlay').querySelectorAll('input, select, button')];
+  quickSaving = true;
+  controls.forEach(el => { el.disabled = true; });
+  $('q-error').textContent = '';
+  let debited = false;
+  let saved = false;
+  let entry;
+  try {
+    if (source.id !== 'free') { await writeSource(after); debited = true; }
+    if (ex) {
+      await api.updateEntry(ex.id, patch);
+      entry = { ...ex, ...patch };
+    } else {
+      entry = await api.createEntry({ month_id: monthId, type: 'planned', category, name, ...patch });
+    }
+    saved = true;
+  } catch {
+    let message = 'Не удалось записать расход. Попробуй ещё раз.';
+    if (debited) {
+      try { await writeSource(before); applySource(before); }
+      catch {
+        applySource();
+        quickBlocked = true;
+        message = 'Расход не записан, но источник уменьшен. Проверь бюджет и обнови страницу перед повтором.';
+      }
+    }
+    if (state.monthId === monthId) renderAll();
+    $('q-error').textContent = message;
+  } finally {
+    quickSaving = false;
+    controls.forEach(el => { el.disabled = false; });
+    updateQuickSource();
   }
-  closeQuick();
-  renderAll();
+  if (saved) {
+    applySource();
+    if (state.monthId === monthId) { upsert(state.entries, entry); renderAll(); }
+    closeQuick();
+    flash(outsidePlan ? `${name}: ${money(v)} · ${source.title.toLowerCase()}` : `${name}: добавлено в траты`);
+  }
 }
 
 function onEscape() {

@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="shared/core.css?v=4">
-<link rel="stylesheet" href="app.css?v=9">
+<link rel="stylesheet" href="app.css?v=14">
 <style>
 /* своё у версии с Supabase; общий интерфейс в shared/core.css */
 .logout-btn, .refresh-btn {
@@ -56,7 +56,7 @@
 .login-err { color: var(--red); font-size: 13px; text-align: center; min-height: 18px; }
 </style>
 <link rel="stylesheet" href="ui/base.css?v=1">
-<link rel="stylesheet" href="ui/lilac.css?v=1">
+<link rel="stylesheet" href="ui/lilac.css?v=3">
 </head>
 <body>
 
@@ -144,18 +144,28 @@
   </div>
 </div>
 
-<!-- Потратил вне плана -->
+<!-- Новая трата -->
 <div id="sheet-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeQuick()">
   <form class="sheet" role="dialog" aria-modal="true" aria-labelledby="quick-title" onsubmit="saveQuick(event)">
-    <h3 id="quick-title">Потратил вне плана</h3>
-    <input id="q-sum" aria-label="Сумма расхода, ₽" inputmode="tel" placeholder="Сумма, ₽" autocomplete="off">
+    <h3 id="quick-title">Новая трата</h3>
+    <div class="quick-amounts">
+      <div><label id="q-sum-label" for="q-sum">План, ₽</label><input id="q-sum" aria-label="Сумма расхода, ₽" inputmode="decimal" placeholder="0" autocomplete="off" oninput="updateQuickSource()"></div>
+      <div id="q-actual-field"><label for="q-actual">Факт, ₽</label><input id="q-actual" inputmode="decimal" placeholder="0" autocomplete="off"></div>
+    </div>
     <input id="q-name" aria-label="Название расхода" type="text" placeholder="На что (например, Аптека)" list="q-names" autocomplete="off">
     <datalist id="q-names"></datalist>
     <div class="who" id="q-who"></div>
-    <p>Если название совпадёт со строкой той же категории, сумма прибавится к её факту. Иначе появится новая строка с пометкой «вне плана».</p>
+    <label class="quick-offplan"><input type="checkbox" id="q-offplan" onchange="updateQuickSource()">Вне плана</label>
+    <div id="q-source-fields" class="quick-source hidden">
+      <label for="q-source">Откуда взял</label>
+      <select id="q-source" aria-describedby="q-source-note" onchange="updateQuickSource()"></select>
+      <p id="q-source-note" aria-live="polite"></p>
+    </div>
+    <p id="q-note">Новая запись появится в тратах.</p>
+    <p id="q-error" role="alert"></p>
     <div class="confirm-btns">
       <button type="button" class="confirm-cancel" onclick="closeQuick()">Отмена</button>
-      <button type="submit" class="confirm-ok">Записать</button>
+      <button type="submit" class="confirm-ok" id="q-save">Записать</button>
     </div>
   </form>
 </div>
@@ -191,6 +201,7 @@
     <div class="section hero">
       <details class="budget-disclosure" id="budget-disclosure">
         <summary>Бюджет</summary>
+        <div class="budget-income"><span>Общий доход</span><b id="h-income"></b></div>
         <div class="budget-chart">
           <div class="budget-donut">
             <div class="budget-ring" id="h-ring" role="img" aria-label="Распределение бюджета"></div>
@@ -250,6 +261,7 @@
         <span class="sub" id="planned-total"></span>
       </div>
       <div class="cat-tabs" id="cat-tabs"></div>
+      <div class="expense-key" aria-label="Колонки трат"><span class="key-plan">План</span><span class="key-actual">Факт</span><span class="key-left">Осталось</span></div>
       <div class="thead r-plan"><div></div><div>Название</div><div class="r">План</div><div class="r">Факт</div><div class="r">Осталось</div><div></div><div></div></div>
       <div id="planned-body"></div>
       <div class="tfoot r-plan hidden" id="planned-foot"></div>
@@ -259,7 +271,7 @@
       </details>
       <div class="add-row split">
         <button class="add-btn" onclick="addEntry('planned')">+ Запланировать</button>
-        <button class="add-btn quick" onclick="openQuick()">⚡ Потратил вне плана</button>
+        <button class="add-btn quick" onclick="openQuick(true)">Потратил вне плана</button>
       </div>
     </div>
 
@@ -281,12 +293,15 @@
   </div>
 </main>
 
+<div id="pull-refresh" class="pull-refresh" role="status" aria-live="polite"><span aria-hidden="true">↻</span><b id="pull-refresh-text"></b></div>
+<button type="button" class="expense-fab" id="expense-fab" aria-label="Добавить трату" onclick="openQuick()" disabled>+</button>
+
 </div><!-- /app -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="shared/core.js?v=4"></script>
-<script src="app.js?v=8"></script>
-<script src="ui/lilac.js?v=1"></script>
+<script src="app.js?v=13"></script>
+<script src="ui/lilac.js?v=3"></script>
 <script>
 // Версия с Supabase: общий бюджет с Настей, живая синхронизация между телефонами.
 // Общее с free/ — в shared/core.js, свой интерфейс поверх него — в app.js,
@@ -301,7 +316,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 cats = [
-  { id: 'me',     name: 'Я',     color: '#3b82f6' },
+  { id: 'me',     name: 'Рустам', color: '#3b82f6' },
   { id: 'nastya', name: 'Настя', color: '#ec4899' },
   { id: 'shared', name: 'Общие', color: '#10b981' },
 ];

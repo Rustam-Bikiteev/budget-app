@@ -1,6 +1,6 @@
 /* In-memory implementation of the existing storage contract. No production API. */
 cats = [
-  {id:'me',name:'Я',color:'#95b3cb'},
+  {id:'me',name:'Рустам',color:'#95b3cb'},
   {id:'nastya',name:'Настя',color:'#c49bd0'},
   {id:'shared',name:'Общие',color:'#98c4aa'},
 ];
