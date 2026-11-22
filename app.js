@@ -1,19 +1,14 @@
-// Свой интерфейс версии с Supabase поверх shared/core.js: главная цифра «Свободно»,
-// кошельки «Я + Общие» и «Насте», оплата обязательных, траты строками с меню действий.
+// Свой интерфейс версии с Supabase поверх shared/core.js: круговая сводка,
+// оплата обязательных, траты строками с меню действий.
 //
 // Подключается после core.js и до скрипта index.html. Функции с теми же именами,
 // что в core.js (renderSummary, renderPlanned, saveEntry...), заменяют общие:
 // core вызывает их по имени. free/ подключает только core.js и этого не видит.
 //
 // Схема данных та же. «Оплачено» у обязательного платежа = actual >= planned
-// (поле actual у обязательных раньше не использовалось). Отметка перевода Насте
-// живёт в months.transferred; пока колонки нет, кнопка перевода скрыта.
+// (поле actual у обязательных раньше не использовалось).
 
 const CAT_ORDER   = ['me', 'shared', 'nastya'];
-const MY_CATS     = ['me', 'shared'];   // мой кошелёк: личное и общее трачу я
-const NASTYA      = 'nastya';           // её план переводится ей целиком
-const NASTYA_LIMIT = 40000;
-const MY_LIMIT_DEFAULT = 40000;
 
 coreConfig.copyPrevByDefault = true;
 
@@ -91,15 +86,6 @@ function catSort(list) {
   return [...list].sort((a, b) => CAT_ORDER.indexOf(a.category) - CAT_ORDER.indexOf(b.category));
 }
 
-function myLimit() {
-  try { return num(localStorage.getItem('budget.myLimit')) || MY_LIMIT_DEFAULT; }
-  catch { return MY_LIMIT_DEFAULT; }
-}
-function setMyLimit(v) {
-  try { localStorage.setItem('budget.myLimit', String(num(v) || MY_LIMIT_DEFAULT)); } catch {}
-  renderSummary();
-}
-
 // «1200+800» — новая сумма; «+500» и «-300» в начале — к текущему значению. null — не разобрали.
 function parseSum(str, cur) {
   const s = String(str).replace(/\s/g, '').replace(/,/g, '.').replace(/−/g, '-');
@@ -141,89 +127,46 @@ function calc() {
   const life     = state.income - mand - state.saved;
   const allocated = sumBy(plan, used);
   const spent    = sumBy(plan, e => e.actual);
-  const mine     = plan.filter(e => MY_CATS.includes(e.category));
-  const nastya   = sumBy(plan.filter(e => e.category === NASTYA), used);
-  return {
-    mand, mandPaid, life, allocated, spent, free: life - allocated,
-    mySpent: sumBy(mine, e => e.actual), myPlan: sumBy(mine, used), nastya,
-  };
+  return { mand, mandPaid, life, allocated, spent, free: life - allocated };
 }
 
-// ── сводка и кошельки ────────────────────────────────────────────────────────
+// ── круговая сводка ──────────────────────────────────────────────────────────
 
 function renderSummary() {
   const k = calc();
 
   $('h-free').textContent = money(k.free);
   $('h-free').classList.toggle('neg', k.free < 0);
+  $('h-free-label').textContent = k.free < 0 ? 'Дефицит' : 'Свободно';
+  $('h-left').textContent = money(k.allocated - k.spent);
   $('h-forecast').textContent = money(state.saved + Math.max(k.free, 0));
 
-  const base = Math.max(k.life, k.allocated, 1);
-  const pct = v => Math.max(0, v / base * 100) + '%';
-  $('h-bar').innerHTML =
-    `<div style="width:${pct(k.spent)};background:var(--blue)"></div>` +
-    `<div style="width:${pct(k.allocated - k.spent)};background:#bfdbfe"></div>` +
-    `<div style="width:${pct(k.free)};background:var(--green)"></div>`;
-  $('h-legend').innerHTML =
-    `<span><i style="background:var(--blue)"></i>потрачено ${money(k.spent)}</span>` +
-    `<span><i style="background:#bfdbfe"></i>в планах, ещё не потрачено ${money(k.allocated - k.spent)}</span>` +
-    `<span><i style="background:var(--green)"></i>свободно ${money(k.free)}</span>` +
-    `<span>из ${money(k.life)} на жизнь</span>`;
+  renderBudgetChart('h-ring', 'h-legend', [
+    { label: 'Обязательные', value: k.mand, color: '#64748b' },
+    { label: 'Отложить', value: state.saved, color: '#7c3aed' },
+    { label: 'Запланировано', value: k.allocated, color: 'var(--blue)' },
+    { label: 'Свободно', value: Math.max(0, k.free), color: 'var(--green)' },
+  ], `Распределение бюджета${k.free < 0 ? `. Дефицит: ${money(-k.free)}` : ''}`);
 
-  $('f-mand').textContent = money(-k.mand);
-  $('f-mand-sub').textContent = `оплачено ${money(k.mandPaid)}, впереди ${money(k.mand - k.mandPaid)}`;
-  $('f-life').textContent = money(k.life);
-  $('f-alloc').textContent = money(-k.allocated);
-  $('f-alloc-sub').textContent = `по каждой строке берётся большее из плана и факта; уже потрачено ${money(k.spent)}`;
-  $('f-free').textContent = money(k.free);
-  $('f-free').classList.toggle('neg', k.free < 0);
-
-  renderPockets(k);
+  renderBudgetChart('h-spending-ring', 'h-spending-legend', [
+    { label: 'Потрачено', value: k.spent, color: 'var(--blue)' },
+    { label: 'Осталось потратить', value: k.allocated - k.spent, color: '#93c5fd' },
+  ], 'Запланированные траты');
 }
 
-function renderPockets(k) {
-  const limit = myLimit();
-  const left = limit - k.mySpent;
-  const d = daysLeft();
-  $('p-me-left').textContent = money(left);
-  $('p-me-left').style.color = left < 0 ? 'var(--red)' : '';
-  $('p-me-cap').textContent = left < 0 ? 'лимит превышен'
-    : d ? `осталось из лимита · ~${money(left / d)} в день` : 'осталось из лимита';
-  const mp = Math.min(100, limit ? k.mySpent / limit * 100 : 0);
-  $('p-me-bar').style.width = mp + '%';
-  $('p-me-bar').style.background = k.mySpent > limit ? 'var(--red)' : mp > 85 ? 'var(--amber)' : 'var(--c-me)';
-  $('p-me-spent').textContent = money(k.mySpent);
-  $('p-me-plan').textContent = money(k.myPlan) + (k.myPlan > limit ? ' · больше лимита' : '');
-  const inp = $('p-me-limit');
-  if (document.activeElement !== inp) inp.value = limit;
-
-  $('p-n-sum').textContent = money(k.nastya);
-  $('p-n-bar').style.width = Math.min(100, k.nastya / NASTYA_LIMIT * 100) + '%';
-  $('p-n-limit').textContent = money(NASTYA_LIMIT);
-
-  const row = curMonthRow();
-  const btn = $('p-n-btn');
-  const hasCol = !!row && 'transferred' in row;
-  btn.classList.toggle('hidden', !hasCol);
-  if (!hasCol) { $('p-n-warn').innerHTML = ''; return; }
-  const sent = row.transferred;
-  const diff = sent == null ? 0 : k.nastya - sent;
-  $('p-n-warn').innerHTML = diff
-    ? `<div class="warn">План изменился после перевода: ${diff > 0
-        ? 'доперевести ' + money(diff) : 'переведено больше на ' + money(-diff)}</div>`
-    : '';
-  if (sent == null) { btn.className = 'transfer-btn'; btn.textContent = `Отметить: перевёл ${money(k.nastya)}`; }
-  else { btn.className = 'transfer-btn done'; btn.textContent = `✓ Переведено ${money(sent)} (отменить)`; }
-}
-
-async function toggleTransfer() {
-  const row = curMonthRow();
-  if (!row) return;
-  const value = row.transferred == null ? calc().nastya : null;
-  await api.updateMonth(row.id, { transferred: value });
-  upsert(state.allMonths, { ...row, transferred: value });
-  renderSummary();
-  flash(value == null ? 'Отметка перевода снята' : 'Перевод Насте отмечен');
+function renderBudgetChart(ringId, legendId, parts, label) {
+  const total = sumBy(parts, p => Math.max(0, p.value));
+  let angle = 0;
+  const stops = parts.filter(p => p.value > 0).map(p => {
+    const start = angle;
+    angle += p.value / total * 360;
+    return `${p.color} ${start}deg ${angle}deg`;
+  });
+  const ring = $(ringId);
+  ring.style.background = total > 0 ? `conic-gradient(${stops.join(',')})` : 'var(--border)';
+  ring.setAttribute('aria-label', `${label}. ${parts.map(p => `${p.label}: ${money(p.value)}`).join('. ')}`);
+  $(legendId).innerHTML =
+    parts.map(p => `<div><dt><i aria-hidden="true" style="background:${p.color}"></i>${p.label}</dt><dd>${money(p.value)}</dd></div>`).join('');
 }
 
 // ── обязательные ─────────────────────────────────────────────────────────────

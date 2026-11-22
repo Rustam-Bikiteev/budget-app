@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="shared/core.css?v=4">
-<link rel="stylesheet" href="app.css?v=6">
+<link rel="stylesheet" href="app.css?v=9">
 <style>
 /* своё у версии с Supabase; общий интерфейс в shared/core.css */
 .logout-btn, .refresh-btn {
@@ -185,60 +185,29 @@
   <!-- Budget view -->
   <div id="budget-view" class="hidden">
 
-    <!-- Главная цифра -->
+    <!-- Сводка бюджета -->
     <div class="section hero">
-      <div class="hero-top">
-        <div>
-          <div class="lbl">Свободно</div>
-          <div class="hero-val" id="h-free"></div>
-          <div class="hero-cap">не распределено ни по одному плану: можно запланировать или отложить</div>
+      <details class="budget-disclosure" id="budget-disclosure">
+        <summary>Бюджет</summary>
+        <div class="budget-chart">
+          <div class="budget-donut">
+            <div class="budget-ring" id="h-ring" role="img" aria-label="Распределение бюджета"></div>
+            <div class="donut-center">
+              <div class="donut-label" id="h-free-label">Свободно</div>
+              <div class="hero-val" id="h-free" aria-live="polite"></div>
+            </div>
+          </div>
+          <dl class="budget-legend" id="h-legend"></dl>
         </div>
-        <div class="hero-side">
-          <div class="lbl">Прогноз накоплений</div>
-          <div class="v" id="h-forecast"></div>
-          <div class="hero-cap">отложить + свободно</div>
-        </div>
-      </div>
-      <div class="bar" id="h-bar"></div>
-      <div class="legend" id="h-legend"></div>
-      <div class="formula" id="formula" role="group" aria-label="Доход и расчёт бюджета">
-        <div class="f-row"><label for="income-inp">Доход спринта</label>
+      </details>
+      <div class="budget-fields" role="group" aria-label="Параметры бюджета">
+        <div class="budget-field"><label for="income-inp">Доход</label>
           <input class="edit-num" type="number" inputmode="decimal" id="income-inp" placeholder="0"
             onblur="saveMonthFields()" onkeydown="enterBlur(event)"></div>
-        <div class="f-row"><span class="n">− Обязательные<small id="f-mand-sub"></small></span><b id="f-mand"></b></div>
-        <div class="f-row"><label class="n" for="saved-inp">− Отложить</label>
+        <div class="budget-field"><label for="saved-inp">Отложить</label>
           <input class="edit-num" type="number" inputmode="decimal" id="saved-inp" placeholder="0"
             onblur="saveMonthFields()" onkeydown="enterBlur(event)"></div>
-        <div class="f-row sum"><span>= На жизнь</span><span id="f-life"></span></div>
-        <div class="f-row"><span class="n">− Распределено по планам<small id="f-alloc-sub"></small></span><b id="f-alloc"></b></div>
-        <div class="f-row sum"><span>= Свободно</span><span id="f-free"></span></div>
-      </div>
-    </div>
-
-    <!-- Кошельки -->
-    <div class="pockets">
-      <div class="section pocket">
-        <div class="pocket-title">
-          <span class="dot" style="background:var(--c-me)"></span><span class="dot" style="background:var(--c-shared);margin-left:-4px"></span>
-          Мой кошелёк · Я + Общие
-        </div>
-        <div class="big" id="p-me-left"></div>
-        <div class="cap" id="p-me-cap"></div>
-        <div class="pbar"><div id="p-me-bar"></div></div>
-        <div class="p-row"><span>Потрачено</span><b id="p-me-spent"></b></div>
-        <div class="p-row"><span>Запланировано</span><b id="p-me-plan"></b></div>
-        <div class="p-row"><span>Лимит на спринт</span>
-          <input class="edit-num limit-inp" type="number" inputmode="decimal" id="p-me-limit"
-            onchange="setMyLimit(this.value)" onkeydown="enterBlur(event)"></div>
-      </div>
-      <div class="section pocket">
-        <div class="pocket-title"><span class="dot" style="background:var(--c-nastya)"></span> Насте</div>
-        <div class="big" id="p-n-sum"></div>
-        <div class="cap">план в её категории: переводишь ей, дальше тратит сама</div>
-        <div class="pbar"><div id="p-n-bar" style="background:var(--c-nastya)"></div></div>
-        <div class="p-row"><span>Лимит на спринт</span><b id="p-n-limit"></b></div>
-        <div id="p-n-warn"></div>
-        <button class="transfer-btn hidden" id="p-n-btn" onclick="toggleTransfer()"></button>
+        <div class="budget-field forecast"><span>Прогноз накоплений</span><b id="h-forecast"></b></div>
       </div>
     </div>
 
@@ -255,6 +224,23 @@
       </div>
     </div>
 
+    <!-- Сводка трат -->
+    <div class="section hero">
+      <details class="budget-disclosure" id="spending-disclosure">
+        <summary>Траты по плану</summary>
+        <div class="budget-chart">
+          <div class="budget-donut">
+            <div class="budget-ring" id="h-spending-ring" role="img" aria-label="Запланированные траты"></div>
+            <div class="donut-center">
+              <div class="donut-label">Осталось</div>
+              <div class="hero-val" id="h-left" aria-live="polite"></div>
+            </div>
+          </div>
+          <dl class="budget-legend" id="h-spending-legend"></dl>
+        </div>
+      </details>
+    </div>
+
     <!-- Траты спринта -->
     <div class="section">
       <div class="section-header">
@@ -265,11 +251,10 @@
       <div class="thead r-plan"><div></div><div>Название</div><div class="r">План</div><div class="r">Факт</div><div class="r">Осталось</div><div></div><div></div></div>
       <div id="planned-body"></div>
       <div class="tfoot r-plan hidden" id="planned-foot"></div>
-      <div class="hint">
-        В «Факт» можно писать <code>1200+800</code>, <code>+500</code> или <code>−300</code> (прибавится к текущему или вычтется).
-        <span class="desk">Строку можно утащить мышкой влево: «В бэклог» и «Удалить».</span>
-        <span class="mob">Стрелка ↓ переносит в бэклог, × удаляет после подтверждения.</span>
-      </div>
+      <details class="hint">
+        <summary>Как вводить суммы</summary>
+        <p><code>1200+800</code> задаёт сумму, <code>+500</code> добавляет, <code>−300</code> вычитает.</p>
+      </details>
       <div class="add-row split">
         <button class="add-btn" onclick="addEntry('planned')">+ Запланировать</button>
         <button class="add-btn quick" onclick="openQuick()">⚡ Потратил вне плана</button>
@@ -281,7 +266,7 @@
   <!-- Бэклог: общий для всех спринтов, виден и на пустом спринте -->
   <div class="section">
     <div class="section-header backlog-header" onclick="toggleBacklog()">
-      <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Бэклог <span class="sub">· общий, не привязан к спринту</span></h2>
+      <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Бэклог</h2>
       <span class="sub" id="backlog-total"></span>
     </div>
     <div id="backlog-content" class="hidden">
@@ -298,7 +283,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="shared/core.js?v=4"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=8"></script>
 <script>
 // Версия с Supabase: общий бюджет с Настей, живая синхронизация между телефонами.
 // Общее с free/ — в shared/core.js, свой интерфейс поверх него — в app.js,

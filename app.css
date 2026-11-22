@@ -1,12 +1,9 @@
 /* Свой интерфейс версии с Supabase поверх shared/core.css:
-   сводка «Свободно», кошельки, строки трат с меню действий. free/ этот файл не подключает. */
+   круговая сводка, строки трат с меню действий. free/ этот файл не подключает. */
 
 :root {
   --muted2: #475569;
   --red-light: #fee2e2;
-  --c-me: #3b82f6;
-  --c-nastya: #ec4899;
-  --c-shared: #10b981;
 }
 
 /* ── шапка: период датами ── */
@@ -25,49 +22,36 @@ header { height: 60px; }
 .neg { color: var(--red); }
 .zero { color: var(--muted); }
 
-/* ── главная цифра ── */
-.hero { padding: 18px; }
-.hero-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-.hero-val { font-size: 34px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin-top: 4px; }
+/* ── круговая сводка ── */
+.hero { padding: 0; }
+.budget-disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 16px 24px; list-style: none; cursor: pointer; font-size: 16px; font-weight: 700; }
+.budget-disclosure > summary::-webkit-details-marker { display: none; }
+.budget-disclosure > summary::after { content: ''; width: 9px; height: 9px; border-right: 2px solid var(--muted2); border-bottom: 2px solid var(--muted2); transform: rotate(-45deg); margin-right: 4px; flex-shrink: 0; }
+.budget-disclosure[open] > summary::after { transform: rotate(45deg); }
+.budget-chart { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: center; justify-items: center; gap: 32px; min-width: 0; padding: 8px 24px 24px; }
+.budget-donut { position: relative; width: 220px; max-width: 100%; aspect-ratio: 1; }
+.budget-ring { position: absolute; inset: 0; border-radius: 50%; background: var(--border); }
+.budget-ring::after { content: ''; position: absolute; inset: 22px; border-radius: 50%; background: var(--surface); }
+.donut-center { position: absolute; inset: 26px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; pointer-events: none; }
+.donut-label { font-size: 14px; color: var(--muted2); }
+.hero-val { font-size: clamp(18px, 3vw, 28px); font-weight: 800; letter-spacing: -.7px; line-height: 1.15; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .hero-val.neg { color: var(--red); }
-.hero-cap { font-size: 12px; color: var(--muted2); margin-top: 2px; }
-.hero-side { text-align: right; }
-.hero-side .v { font-size: 18px; font-weight: 800; }
-.bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: var(--bg); margin: 16px 0 8px; }
-.bar div { height: 100%; transition: width .25s; }
-.legend { display: flex; gap: 4px 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted2); }
-.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
-.formula { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
-.f-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 14px; gap: 10px; }
-.f-row .n { color: var(--muted2); }
-.f-row.sum { border-top: 1px solid var(--border); font-weight: 800; margin-top: 2px; padding-top: 8px; }
-.f-row small { color: var(--muted); font-size: 11px; display: block; }
+.budget-legend { display: grid; gap: 16px; min-width: 0; width: 100%; }
+.budget-legend > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
+.budget-legend dt { display: flex; align-items: center; gap: 10px; color: var(--muted2); }
+.budget-legend i { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.budget-legend dd { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.budget-fields { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 16px; padding: 18px 24px 24px; border-top: 1px solid var(--border); }
+.budget-field { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; font-size: 14px; }
+.budget-field label, .budget-field > span { color: var(--muted2); }
+.budget-field .edit-num { width: 100%; max-width: 160px; min-height: 40px; text-align: left; font-size: 16px; }
+.forecast b { display: flex; align-items: center; min-height: 40px; font-size: 18px; font-variant-numeric: tabular-nums; }
 .edit-num {
   border: 1px dashed var(--border); border-radius: 6px; padding: 3px 8px;
   font: inherit; font-weight: 700; width: 120px; text-align: right;
   background: var(--blue-light); color: var(--text);
 }
 .edit-num:focus { outline: none; border-color: var(--blue); }
-
-/* ── кошельки ── */
-.pockets { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.pocket { padding: 16px 18px; }
-.pocket-title { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 14px; }
-.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-.pocket .big { font-size: 24px; font-weight: 800; margin: 8px 0 2px; letter-spacing: -.5px; }
-.pocket .cap { font-size: 12px; color: var(--muted2); }
-.pbar { height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; margin: 10px 0 6px; }
-.pbar div { height: 100%; border-radius: 4px; transition: width .25s; }
-.p-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted2); margin-top: 3px; }
-.p-row b { color: var(--text); }
-.limit-inp { width: 90px; padding: 1px 6px; font-size: 12px; }
-.transfer-btn {
-  margin-top: 12px; width: 100%; padding: 9px; border-radius: 8px;
-  border: 1.5px solid var(--c-nastya); background: #fdf2f8; color: #be185d;
-  font-weight: 700; cursor: pointer; font-size: 13px; font-family: inherit;
-}
-.transfer-btn.done { border-color: var(--border); background: var(--bg); color: var(--muted2); }
-.warn { margin-top: 8px; font-size: 12px; color: #b45309; background: var(--amber-light); border-radius: 6px; padding: 6px 8px; }
 
 /* ── строки ── */
 .sub { font-size: 12px; color: var(--muted2); font-weight: 600; }
@@ -107,7 +91,9 @@ header { height: 60px; }
 }
 .tfoot { display: grid; background: #f8fafc; border-top: 2px solid var(--border); font-weight: 700; font-size: 13px; }
 .tfoot > div { padding: 9px 10px; }
-.hint { font-size: 11px; color: var(--muted); padding: 8px 18px; border-top: 1px solid var(--border); background: #fcfdfe; line-height: 1.5; }
+.hint { font-size: 14px; color: var(--muted); padding: 10px 18px; border-top: 1px solid var(--border); background: #fcfdfe; line-height: 1.5; }
+.hint summary { cursor: pointer; }
+.hint p { margin-top: 8px; }
 .hint code { background: var(--bg); padding: 1px 5px; border-radius: 4px; color: var(--text); }
 
 .cat-tabs { align-items: center; }
@@ -196,9 +182,13 @@ header { height: 60px; }
 
 @media (max-width: 640px) {
   .month-label-btn.period { min-width: 150px; }
-  .pockets { grid-template-columns: 1fr; }
-  .hero-val { font-size: 30px; }
-  .hero-side { text-align: left; }
+  .budget-disclosure > summary { padding: 16px; }
+  .budget-chart { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 4px 16px 20px; }
+  .hero-val { font-size: 26px; }
+  .budget-legend { gap: 12px; }
+  .budget-fields { grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px; }
+  .budget-field.forecast { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+  .forecast b { min-height: 24px; font-size: 16px; }
   .edit-num { width: 105px; }
   .r-mand { grid-template-columns: 38px 26px 1fr 78px 32px; }
   .r-plan { grid-template-columns: 24px 1fr 58px 58px 58px 28px 28px; }
@@ -210,10 +200,8 @@ header { height: 60px; }
   .mini-btn { width: 28px; }
   .name-cell { flex-direction: column; align-items: stretch; }
   .badge { align-self: flex-start; margin: 0 0 4px 4px; }
-  .hint .desk { display: none; }
   .add-row.split { flex-direction: column; }
 }
-@media (min-width: 641px) { .hint .mob { display: none; } }
 
 /* Compact category picker: native options open on click or keyboard. */
 .cloud-category { appearance: none; width: 22px; height: 22px; border-radius: 50%; margin: auto; padding: 0; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--cat); background: var(--cat); color: transparent; font-size: 0; cursor: pointer; }
