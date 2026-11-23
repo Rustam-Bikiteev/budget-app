@@ -52,6 +52,20 @@ test('spending sectors count overspending once and retain unspent allocations', 
   assert.match(app.fields['h-left'].textContent, /100/);
 });
 
+test('only the budget infographic shows percentages of its whole circle', () => {
+  const app = setup();
+  const shares = () => [...app.fields['h-legend'].innerHTML.matchAll(/class="chart-share">([^<]+)/g)].map(match => match[1]);
+  assert.deepEqual(shares(), ['38%', '20%', '22%', '20%']);
+  assert.match(app.fields['h-ring']['aria-label'], /Обязательные:.*38%/);
+  assert.doesNotMatch(app.fields['h-spending-legend'].innerHTML, /%/);
+  assert.doesNotMatch(app.fields['h-spending-ring']['aria-label'], /%/);
+
+  app.run('state.income = 700; renderSummary()');
+  assert.deepEqual(shares(), ['47,5%', '25%', '27,5%', '-12,5%']);
+  app.run('state.income = state.saved = 0; state.entries = []; renderSummary()');
+  assert.deepEqual(shares(), ['0%', '0%', '0%', '0%']);
+});
+
 test('deficit remains explicit and empty charts have no invalid gradient', () => {
   const app = setup(700);
   assert.deepEqual(app.parts('h-ring').at(-1).value, -100);

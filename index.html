@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="shared/core.css?v=4">
-<link rel="stylesheet" href="app.css?v=15">
+<link rel="stylesheet" href="app.css?v=17">
 <style>
 /* своё у версии с Supabase; общий интерфейс в shared/core.css */
 .logout-btn, .refresh-btn {
@@ -56,7 +56,7 @@
 .login-err { color: var(--red); font-size: 13px; text-align: center; min-height: 18px; }
 </style>
 <link rel="stylesheet" href="ui/base.css?v=1">
-<link rel="stylesheet" href="ui/lilac.css?v=5">
+<link rel="stylesheet" href="ui/lilac.css?v=7">
 </head>
 <body>
 
@@ -119,6 +119,7 @@
     <div class="pad-head">
       <b id="pad-title"></b>
       <div class="pad-tabs" id="pad-tabs"></div>
+      <button type="button" class="pad-close" aria-label="Закрыть ввод суммы" onclick="closePad()">×</button>
     </div>
     <div class="pad-display" id="pad-display"></div>
     <div class="pad-preview" id="pad-preview"></div>
@@ -136,10 +137,11 @@
       <button type="button" onclick="padKey('2')">2</button>
       <button type="button" onclick="padKey('3')">3</button>
       <button type="button" class="k-op" onclick="padKey('-')">−</button>
-      <button type="button" class="k-fn" onclick="padKey('clear')">C</button>
+      <button type="button" onclick="padKey('00')">00</button>
       <button type="button" onclick="padKey('0')">0</button>
       <button type="button" onclick="padKey('000')">000</button>
-      <button type="button" class="k-ok" id="pad-ok" onclick="padDone()">✓</button>
+      <button type="button" class="k-fn" onclick="padKey('clear')" aria-label="Очистить сумму">C</button>
+      <button type="button" class="k-ok" id="pad-ok" onclick="padDone()">Сохранить сумму</button>
     </div>
   </div>
 </div>
@@ -152,8 +154,7 @@
       <div><label id="q-sum-label" for="q-sum">План, ₽</label><input id="q-sum" aria-label="Сумма расхода, ₽" inputmode="decimal" placeholder="0" autocomplete="off" oninput="updateQuickSource()"></div>
       <div id="q-actual-field"><label for="q-actual">Факт, ₽</label><input id="q-actual" inputmode="decimal" placeholder="0" autocomplete="off"></div>
     </div>
-    <input id="q-name" aria-label="Название расхода" type="text" placeholder="На что (например, Аптека)" list="q-names" autocomplete="off">
-    <datalist id="q-names"></datalist>
+    <input id="q-name" aria-label="Название расхода" type="text" placeholder="На что (например, Аптека)" autocomplete="off">
     <div class="who" id="q-who"></div>
     <label class="quick-offplan"><input type="checkbox" id="q-offplan" onchange="updateQuickSource()">Вне плана</label>
     <div id="q-source-fields" class="quick-source hidden">
@@ -300,8 +301,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="shared/core.js?v=4"></script>
-<script src="app.js?v=14"></script>
-<script src="ui/lilac.js?v=4"></script>
+<script src="app.js?v=16"></script>
+<script src="ui/lilac.js?v=6"></script>
 <script>
 // Версия с Supabase: общий бюджет с Настей, живая синхронизация между телефонами.
 // Общее с free/ — в shared/core.js, свой интерфейс поверх него — в app.js,

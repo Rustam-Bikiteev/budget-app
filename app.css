@@ -52,6 +52,7 @@ header { height: 60px; }
 .budget-legend dt { display: flex; align-items: center; gap: 10px; color: var(--muted2); }
 .budget-legend i { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 .budget-legend dd { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chart-share { display: inline-block; margin-left: 8px; color: var(--muted2); font-size: 12px; font-weight: 400; }
 .budget-fields { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 16px; padding: 18px 24px 24px; border-top: 1px solid var(--border); }
 .budget-field { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; font-size: 14px; }
 .budget-field label, .budget-field > span { color: var(--muted2); }
@@ -198,7 +199,7 @@ header { height: 60px; }
 .pad-keys button:active { background: var(--border); }
 .pad-keys .k-fn { color: var(--muted2); font-size: 19px; }
 .pad-keys .k-op { background: var(--blue-light); color: var(--blue); font-size: 26px; }
-.pad-keys .k-ok { background: var(--blue); color: #fff; }
+.pad-keys .k-ok { grid-column: 1 / -1; background: var(--blue); color: #fff; font-size: 16px; }
 .pad-keys .k-ok:disabled { background: var(--muted); }
 .row .ci[readonly] { cursor: pointer; }
 

@@ -101,10 +101,6 @@ function lilacTheme(theme){
     document.querySelector('[data-lilac-panel=planned] .section-header').append(lilacSpendingChart);
     lilacSpendingSummary.textContent='Сводка';
     for(const button of lilacHeaderButtons)lilacAccount.querySelector(`[data-account-action="${button.classList.contains('refresh-btn')?'refresh':'logout'}"]`).append(button);
-    lilacOperatorMenu.querySelector('.lilac-operator-chips').append($('pad-chips'));
-    lilacOperatorMenu.querySelector('.lilac-operator-info').append($('pad-preview'));
-    for(const button of lilacOriginalKeys.filter(button=>['+','-','000'].includes(button.dataset.key)))lilacOperatorMenu.querySelector('.lilac-operator-actions').append(button);
-    $('pad-ok').textContent='Сохранить сумму';
   }else{
     lilacMonthNav.append(lilacSprintButtons[0],lilacCalendar,lilacSprintButtons[1]);
     document.querySelector('#budget-view>.hero:first-child').append(fields);
@@ -112,10 +108,6 @@ function lilacTheme(theme){
     lilacSpendingHome.append(lilacSpendingChart);
     lilacSpendingSummary.textContent=lilacSpendingTitle;
     for(const button of lilacHeaderButtons)lilacOriginalHeaderActions.append(button);
-    document.querySelector('.pad-keys').before($('pad-chips'));
-    $('pad-display').after($('pad-preview'));
-    for(const button of lilacOriginalKeys)document.querySelector('.pad-keys').append(button);
-    $('pad-ok').textContent='✓';
   }
 }
 function lilacPercent(value,total){return total>0?Math.round(value/total*100):0;}
@@ -134,7 +126,8 @@ function lilacRender(){
   set('lilac-mand-count',`${state.entries.filter(e=>e.type==='mandatory').length}`);
   set('lilac-plan-count',`${state.entries.filter(e=>e.type==='planned').length}`);
   set('lilac-left',money(k.allocated-k.spent));
-  $('lilac-stat-pills').innerHTML=[['Доход',state.income],['Отложить',state.saved],['Платежи',k.mand],['Потрачено',k.spent]].map(([label,value])=>`<div><span>${label}</span><b>${money(value)}</b></div>`).join('');
+  const circleTotal=sumBy([k.mand,state.saved,k.allocated,k.free],value=>Math.max(0,value));
+  $('lilac-stat-pills').innerHTML=[['Доход',state.income],['Отложить',state.saved],['Платежи',k.mand],['Потрачено',k.spent]].map(([label,value])=>`<div><span>${label}<small class="lilac-stat-share">${chartShare(value,circleTotal)}</small></span><b>${money(value)}</b></div>`).join('');
   lilacRenderBars();
   document.documentElement.dataset.lilacEmpty=String(!state.monthId);
 }
@@ -156,33 +149,8 @@ function lilacRenderBars(){
   document.querySelectorAll('[data-chart]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.chart===lilacChartMode)));
 }
 
-// New composition around the native keypad; every key keeps its original handler.
-const lilacPadTop=document.createElement('div');lilacPadTop.className='lilac-only lilac-pad-top';
-lilacPadTop.innerHTML=`<button onclick="closePad()" aria-label="Закрыть ввод суммы">${lilacSVG('back')}</button><span>Изменить сумму</span><span></span>`;
-document.querySelector('.pad').prepend(lilacPadTop);
-const lilacPadCards=document.createElement('div');lilacPadCards.className='lilac-only lilac-pad-cards';
-lilacPadCards.innerHTML=`<button class="lilac-pad-panel" data-pad-field="planned" onclick="padField('planned')"><span class="lilac-pad-card-head"><i>${lilacSVG('wallet')}</i><span>План</span><small>Вы планируете</small></span><b class="lilac-pad-number"></b></button><span class="lilac-pad-connector">${lilacSVG('swap')}</span><button class="lilac-pad-panel" data-pad-field="actual" onclick="padField('actual')"><span class="lilac-pad-card-head"><i>${lilacSVG('check')}</i><span>Факт</span><small>Вы потратили</small></span><b class="lilac-pad-number"></b></button>`;
-document.querySelector('.pad-head').after(lilacPadCards);
-const lilacOriginalKeys=[...document.querySelectorAll('.pad-keys>button')];
-for(const button of lilacOriginalKeys)button.dataset.key=button.id==='pad-ok'?'done':button.getAttribute('onclick').match(/padKey\('([^']+)'\)/)?.[1];
-const lilacOperatorMenu=document.createElement('details');lilacOperatorMenu.className='lilac-only lilac-operator-menu';
-lilacOperatorMenu.innerHTML='<summary aria-label="Суммы и операции" title="Суммы и операции">···</summary><div class="lilac-operator-content"><div class="lilac-operator-info"></div><div class="lilac-operator-chips"></div><div class="lilac-operator-actions"></div></div>';
-document.querySelector('.pad-preview').after(lilacOperatorMenu);
-function lilacRenderPad(){
-  if(!pad)return;
-  const row=padItem();if(!row)return;
-  const both=pad.kind==='entry'&&row.type==='planned';
-  lilacPadCards.dataset.both=String(both);
-  for(const panel of lilacPadCards.querySelectorAll('[data-pad-field]')){
-    const field=panel.dataset.padField;const active=field===pad.field;
-    panel.setAttribute('aria-pressed',String(active));
-    panel.querySelector('.lilac-pad-number').textContent=active?$('pad-display').textContent:money(row[field]||0);
-  }
-}
 const lilacNativeSummary=renderSummary;
 renderSummary=function(){lilacNativeSummary();lilacRender();};
-const lilacNativePad=renderPad;
-renderPad=function(){lilacNativePad();lilacRenderPad();};
 const lilacNativeLoad=loadCurrentMonth;
 loadCurrentMonth=async function(){await lilacNativeLoad();lilacRender();};
 const lilacNativeModalBackground=updateModalBackground;

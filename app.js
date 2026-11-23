@@ -155,8 +155,14 @@ function renderSummary() {
   ], 'Запланированные траты');
 }
 
+function chartShare(value, total) {
+  const percent = total > 0 ? value / total * 100 : 0;
+  return percent.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + '%';
+}
+
 function renderBudgetChart(ringId, legendId, parts, label) {
   const total = sumBy(parts, p => Math.max(0, p.value));
+  const showShares = ringId === 'h-ring';
   let angle = 0;
   const visible = parts.filter(p => p.value > 0);
   const stops = visible.map(p => {
@@ -167,9 +173,9 @@ function renderBudgetChart(ringId, legendId, parts, label) {
   });
   const ring = $(ringId);
   ring.style.background = total > 0 ? `conic-gradient(${stops.join(',')})` : 'var(--border)';
-  ring.setAttribute('aria-label', `${label}. ${parts.map(p => `${p.label}: ${money(p.value)}`).join('. ')}`);
+  ring.setAttribute('aria-label', `${label}. ${parts.map(p => `${p.label}: ${money(p.value)}${showShares ? `, ${chartShare(p.value, total)}` : ''}`).join('. ')}`);
   $(legendId).innerHTML =
-    parts.map(p => `<div><dt><i aria-hidden="true" style="background:${p.color}"></i>${p.label}</dt><dd>${money(p.value)}</dd></div>`).join('');
+    parts.map(p => `<div><dt><i aria-hidden="true" style="background:${p.color}"></i>${p.label}</dt><dd>${money(p.value)}${showShares ? `<small class="chart-share">${chartShare(p.value, total)}</small>` : ''}</dd></div>`).join('');
 }
 
 // ── обязательные ─────────────────────────────────────────────────────────────
@@ -498,8 +504,6 @@ function openQuick(outsidePlan = false) {
   ).join('');
   $('q-source').value = 'free';
   updateQuickSource();
-  $('q-names').innerHTML = [...new Set(state.entries.filter(e => e.type === 'planned' && e.name).map(e => e.name))]
-    .map(n => `<option value="${esc(n)}">`).join('');
   renderWho();
   openModal($('sheet-overlay'));
   $('q-name').focus();
@@ -704,8 +708,7 @@ function confirmLogout() {
 }
 
 // ── цифровая панель для сумм на телефоне ────────────────────────────────────
-// Вместо системной клавиатуры: + и − рядом с цифрами, подсказки по плану,
-// переключение План/Факт без закрытия. На компьютере поля печатаются как обычно.
+// Всплывающая панель редактирует нажатую сумму. На компьютере поля печатаются как обычно.
 
 const touchUI = () => window.matchMedia('(pointer: coarse)').matches;
 function padAttrs() { return touchUI() ? `readonly onclick="openPad(this)" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPad(this); }"` : 'inputmode="decimal"'; }
@@ -762,10 +765,9 @@ function renderPad() {
   const old = padOld();
   const isPlan = pad.kind === 'entry' && it.type === 'planned';
   $('pad-title').textContent = it.name || 'Без названия';
-  $('pad-tabs').innerHTML = isPlan
-    ? ['planned', 'actual'].map(f => `<button type="button" class="pad-tab ${pad.field === f ? 'active' : ''}"
-        onclick="padField('${f}')">${f === 'planned' ? 'План' : 'Факт'}</button>`).join('')
-    : `<span class="pad-tab active">${pad.kind === 'backlog' ? 'Сумма' : 'Сумма платежа'}</span>`;
+  const fieldLabel = isPlan ? (pad.field === 'planned' ? 'План' : 'Факт')
+    : pad.kind === 'backlog' ? 'Сумма' : 'Сумма платежа';
+  $('pad-tabs').innerHTML = `<span class="pad-tab active">${fieldLabel}</span>`;
   const v = pad.expr === '' ? null : parseSum(pad.expr, old);
   $('pad-display').innerHTML = pad.expr === ''
     ? `<span class="pad-ph">${old ? fmtAbs(old) : '0 ₽'}</span>`
@@ -779,7 +781,6 @@ function renderPad() {
   $('pad-ok').disabled = pad.expr !== '' && (v === null || v < 0);
 }
 
-function padField(f) { pad.field = f; pad.expr = ''; renderPad(); }
 function padChip(expr) { pad.expr = expr; renderPad(); }
 
 function padKey(k) {
