@@ -20,8 +20,15 @@ if(lilacLogin&&!lilacLogin.querySelector('.login-brand')){
 }
 const lilacTop=document.createElement('div');
 lilacTop.className='lilac-only lilac-topbar';
-lilacTop.innerHTML=`<button class="lilac-profile" onclick="lilacBack()" aria-label="Главная"><span>Р</span>${lilacSVG('back')}</button><span class="lilac-page-title"></span><div class="lilac-top-actions"><button class="lilac-calendar" aria-label="Выбрать спринт" onclick="toggleCalendar(event)">${lilacSVG('calendar')}</button></div>`;
+lilacTop.innerHTML=`<button class="lilac-profile" onclick="lilacBack()" aria-label="Главная"><span>Р</span>${lilacSVG('back')}</button><h1 class="lilac-page-title"></h1><div class="lilac-top-actions"></div>`;
 $('app').prepend(lilacTop);
+const lilacMonthNav=document.querySelector('.month-nav');
+const lilacCalendar=document.querySelector('.cal-wrapper');
+const lilacSprintButtons=[...lilacMonthNav.querySelectorAll('.nav-btn')];
+const lilacSprintNav=document.createElement('div');
+lilacSprintNav.className='lilac-only lilac-sprint-nav';
+lilacSprintNav.innerHTML='<span>Спринт</span>';
+$('cal-popup').prepend(lilacSprintNav);
 const lilacMain=document.querySelector('main');
 const lilacOverview=document.createElement('section');lilacOverview.className='lilac-only lilac-overview';
 lilacOverview.innerHTML=`
@@ -47,7 +54,7 @@ lilacMain.prepend(lilacOverview);
 // Move the actual editable inputs, including their original save handlers.
 $('lilac-budget-editor').append(document.querySelector('.budget-fields'));
 const lilacAnalytics=document.createElement('section');lilacAnalytics.className='lilac-only lilac-analytics';
-lilacAnalytics.innerHTML=`<h2>Ваш бюджет в деталях</h2><div class="lilac-stat-pills" id="lilac-stat-pills"></div><div class="lilac-chart-tabs"><button class="lilac-chart-calendar" aria-label="Выбрать спринт" onclick="toggleCalendar(event)">${lilacSVG('calendar')}</button><button data-chart="entries" onclick="lilacSetChart('entries')" aria-pressed="true">По тратам</button><button data-chart="categories" onclick="lilacSetChart('categories')" aria-pressed="false">По категориям</button></div><div class="lilac-bars" id="lilac-bars" role="group" aria-label="План и факт трат"></div><div class="lilac-chart-legend"><span><i></i>В плане</span><span><i></i>Перерасход</span><span><i></i>Осталось</span></div><div class="lilac-chart-total"><span>Осталось потратить</span><b id="lilac-left"></b></div>`;
+lilacAnalytics.innerHTML=`<div class="lilac-stat-pills" id="lilac-stat-pills"></div><div class="lilac-chart-tabs"><button data-chart="entries" onclick="lilacSetChart('entries')" aria-pressed="true">По тратам</button><button data-chart="categories" onclick="lilacSetChart('categories')" aria-pressed="false">По категориям</button></div><div class="lilac-bars" id="lilac-bars" role="group" aria-label="План и факт трат"></div><div class="lilac-chart-legend"><span><i></i>В плане</span><span><i></i>Перерасход</span><span><i></i>Осталось</span></div><div class="lilac-chart-total"><span>Осталось потратить</span><b id="lilac-left"></b></div>`;
 lilacMain.append(lilacAnalytics);
 const lilacAccount=document.createElement('section');lilacAccount.className='lilac-only lilac-account';
 lilacAccount.innerHTML='<div class="lilac-account-action" data-account-action="refresh"><span>Обновить данные</span></div><div class="lilac-account-action" data-account-action="logout"><span>Выйти из аккаунта</span></div>';
@@ -65,11 +72,13 @@ const lilacBudgetChart=$('budget-disclosure');
 const lilacSpendingChart=$('spending-disclosure');
 const lilacBudgetHome=lilacBudgetChart.parentElement;
 const lilacSpendingHome=lilacSpendingChart.parentElement;
+const lilacSpendingSummary=lilacSpendingChart.querySelector('summary');
+const lilacSpendingTitle=lilacSpendingSummary.textContent;
 
 function lilacRoute(page){
   if(!['home','payments','planned','analytics','backlog','account'].includes(page))page='home';
   lilacPage=page;document.documentElement.dataset.lilacPage=page;
-  const titles={home:'',payments:'Платежи',planned:'Траты спринта',analytics:'',backlog:'Бэклог',account:'Аккаунт'};
+  const titles={home:'Бюджет',payments:'Платежи',planned:'Траты',analytics:'Аналитика',backlog:'Бэклог',account:'Аккаунт'};
   document.querySelector('.lilac-page-title').textContent=titles[page];
   document.querySelector('.lilac-profile').setAttribute('aria-label',page==='home'?'Аккаунт':'Главная');
   lilacNav.querySelectorAll('button').forEach(button=>{
@@ -84,18 +93,24 @@ function lilacTheme(theme){
   // Restore the same inputs to the other variants' existing layout.
   const fields=document.querySelector('.budget-fields');
   if(theme==='lilac'){
+    lilacTop.querySelector('.lilac-top-actions').append(lilacCalendar);
+    lilacSprintNav.prepend(lilacSprintButtons[0]);
+    lilacSprintNav.append(lilacSprintButtons[1]);
     $('lilac-budget-editor').append(fields);lilacRoute(lilacPage);
-    lilacAnalytics.querySelector('h2').after(lilacBudgetChart);
-    document.querySelector('[data-lilac-panel=planned] .section-header').after(lilacSpendingChart);
+    lilacAnalytics.prepend(lilacBudgetChart);
+    document.querySelector('[data-lilac-panel=planned] .section-header').append(lilacSpendingChart);
+    lilacSpendingSummary.textContent='Сводка';
     for(const button of lilacHeaderButtons)lilacAccount.querySelector(`[data-account-action="${button.classList.contains('refresh-btn')?'refresh':'logout'}"]`).append(button);
     lilacOperatorMenu.querySelector('.lilac-operator-chips').append($('pad-chips'));
     lilacOperatorMenu.querySelector('.lilac-operator-info').append($('pad-preview'));
     for(const button of lilacOriginalKeys.filter(button=>['+','-','000'].includes(button.dataset.key)))lilacOperatorMenu.querySelector('.lilac-operator-actions').append(button);
     $('pad-ok').textContent='Сохранить сумму';
   }else{
+    lilacMonthNav.append(lilacSprintButtons[0],lilacCalendar,lilacSprintButtons[1]);
     document.querySelector('#budget-view>.hero:first-child').append(fields);
     lilacBudgetHome.prepend(lilacBudgetChart);
     lilacSpendingHome.append(lilacSpendingChart);
+    lilacSpendingSummary.textContent=lilacSpendingTitle;
     for(const button of lilacHeaderButtons)lilacOriginalHeaderActions.append(button);
     document.querySelector('.pad-keys').before($('pad-chips'));
     $('pad-display').after($('pad-preview'));

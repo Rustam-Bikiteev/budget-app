@@ -4,6 +4,13 @@
 :root {
   --muted2: #475569;
   --red-light: #fee2e2;
+  --viz-plan: #b45309;
+  --viz-actual: #1d4ed8;
+  --viz-left: #0f6b63;
+  --viz-over: #be123c;
+  --viz-over-pattern: repeating-linear-gradient(135deg, #be123c 0 3px, #fecdd3 3px 5px);
+  --viz-mandatory: #475569;
+  --viz-saved: #7c3aed;
 }
 
 /* ── шапка: период датами ── */
@@ -226,12 +233,13 @@ button.rem:disabled { opacity: 1; cursor: default; }
 .mini-btn.back { color: var(--amber); }
 .mini-btn.back:hover { background: var(--amber-light); }
 .category-moved { animation: category-arrival 1.8s ease-out; }
-.entry-progress { display: flex; height: 4px; background: #d6cbe9; border-radius: 2px; overflow: hidden; margin: 0 8px 3px; }
+.entry-progress { display: flex; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin: 0 8px 5px; }
 .entry-progress i { display: block; height: 100%; }
-.progress-plan { background: #bcacd3; }
-.progress-actual { background: #3f526f; }
-.progress-left { background: #74936f; }
-.progress-over { background: repeating-linear-gradient(135deg,#a33653 0 3px,#f5c2cf 3px 5px); }
+.entry-progress i + i { box-shadow: inset 1px 0 #fff; }
+.progress-plan { background: var(--viz-plan); }
+.progress-actual { background: var(--viz-actual); }
+.progress-left { background: var(--viz-left); }
+.progress-over { background: var(--viz-over-pattern); }
 .remaining-short, .expense-key { display: none; }
 html { overscroll-behavior-y: contain; }
 .pull-refresh { position: fixed; z-index: 160; top: calc(8px + env(safe-area-inset-top)); left: 50%; transform: translate(-50%, -70px); display: flex; align-items: center; gap: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 24px; padding: 10px 14px; box-shadow: 0 3px 15px #0001; font-size: 13px; white-space: nowrap; visibility: hidden; pointer-events: none; }

@@ -66,6 +66,7 @@ async function doLogin(event){event.preventDefault();$('login-overlay').classLis
 // Only chart colors are remapped. Values and calculations use app.js unchanged.
 const demoRenderBudgetChart=renderBudgetChart;
 renderBudgetChart=function(ring,legend,parts,label){
+  if(document.documentElement.dataset.theme==='lilac')return demoRenderBudgetChart(ring,legend,parts,label);
   const colors=ring==='h-ring'?['var(--chart-1)','var(--chart-2)','var(--chart-3)','var(--chart-4)']:['var(--chart-3)','var(--chart-2)'];
   return demoRenderBudgetChart(ring,legend,parts.map((part,index)=>({...part,color:colors[index]})),label);
 };

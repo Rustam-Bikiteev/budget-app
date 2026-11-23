@@ -143,25 +143,27 @@ function renderSummary() {
   $('h-forecast').textContent = money(state.saved + Math.max(k.free, 0));
 
   renderBudgetChart('h-ring', 'h-legend', [
-    { label: 'Обязательные', value: k.mand, color: '#64748b' },
-    { label: 'Отложено', value: state.saved, color: '#7c3aed' },
-    { label: 'Запланировано', value: k.allocated, color: 'var(--blue)' },
-    { label: k.free < 0 ? 'Дефицит' : 'Свободно', value: k.free, color: k.free < 0 ? 'var(--red)' : 'var(--green)' },
+    { label: 'Обязательные', value: k.mand, color: 'var(--viz-mandatory)' },
+    { label: 'Отложено', value: state.saved, color: 'var(--viz-saved)' },
+    { label: 'Запланировано', value: k.allocated, color: 'var(--viz-plan)' },
+    { label: k.free < 0 ? 'Дефицит' : 'Свободно', value: k.free, color: k.free < 0 ? 'var(--viz-over)' : 'var(--viz-left)' },
   ], `Распределение бюджета${k.free < 0 ? `. Дефицит: ${money(-k.free)}` : ''}`);
 
   renderBudgetChart('h-spending-ring', 'h-spending-legend', [
-    { label: 'Потрачено', value: k.spent, color: 'var(--blue)' },
-    { label: 'Осталось', value: k.allocated - k.spent, color: '#93c5fd' },
+    { label: 'Потрачено', value: k.spent, color: 'var(--viz-actual)' },
+    { label: 'Осталось', value: k.allocated - k.spent, color: 'var(--viz-left)' },
   ], 'Запланированные траты');
 }
 
 function renderBudgetChart(ringId, legendId, parts, label) {
   const total = sumBy(parts, p => Math.max(0, p.value));
   let angle = 0;
-  const stops = parts.filter(p => p.value > 0).map(p => {
+  const visible = parts.filter(p => p.value > 0);
+  const stops = visible.map(p => {
     const start = angle;
     angle += p.value / total * 360;
-    return `${p.color} ${start}deg ${angle}deg`;
+    const gap = visible.length > 1 ? Math.min(1.5, (angle - start) / 4) : 0;
+    return `${p.color} ${start}deg ${angle - gap}deg, var(--surface) ${angle - gap}deg ${angle}deg`;
   });
   const ring = $(ringId);
   ring.style.background = total > 0 ? `conic-gradient(${stops.join(',')})` : 'var(--border)';

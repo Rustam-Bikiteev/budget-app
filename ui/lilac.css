@@ -5,23 +5,22 @@
 [data-theme=lilac] #app{position:relative;background:#fcfcfc;width:min(420px,100%);min-height:max(800px,calc(100dvh - 64px));margin:0 auto;border-radius:44px;padding:30px 18px 180px;isolation:isolate;box-shadow:none}
 [data-theme=lilac] .lilac-only{display:block}
 [data-theme=lilac] .design-welcome,[data-theme=lilac] header h1,[data-theme=lilac] header .header-actions{display:none}
-[data-theme=lilac] .lilac-topbar{display:flex;justify-content:space-between;align-items:center;height:40px;margin:0 0 18px;gap:12px}
+[data-theme=lilac] .lilac-topbar{display:flex;align-items:center;min-height:40px;margin:0 0 12px;gap:8px;position:relative;z-index:100}
 [data-theme=lilac] .lilac-topbar button{border:0;padding:0;display:grid;place-items:center;cursor:pointer;flex-shrink:0}
 [data-theme=lilac] svg{display:block;width:20px;height:20px;flex-shrink:0}
 [data-theme=lilac] .lilac-profile{border-radius:50%;width:36px;height:36px;background:radial-gradient(ellipse at 28% 30%,#90928d,transparent 50%),linear-gradient(40deg,#151a19,#545e55);color:#fff;font-family:Georgia,serif;font-style:italic;font-size:21px}
 [data-theme=lilac] .lilac-profile svg{display:none}
-[data-theme=lilac] .lilac-top-actions{display:flex;gap:10px}
+[data-theme=lilac] .lilac-top-actions{display:flex;margin-left:auto;flex-shrink:0}
 [data-theme=lilac] .expense-fab{right:max(20px,calc((100vw - 420px)/2 + 18px));bottom:calc(108px + env(safe-area-inset-bottom));background:#272827}
-[data-theme=lilac] .lilac-calendar{width:36px;height:36px;border-radius:50%;background:#eee9f8;color:#252426}
-[data-theme=lilac] .lilac-calendar svg{width:18px;height:18px}
-[data-theme=lilac] .lilac-page-title{font-size:17px;letter-spacing:-.5px;flex:1;text-align:center;font-weight:400}
+[data-theme=lilac] .lilac-page-title{font-size:17px;letter-spacing:-.5px;min-width:0;margin:0;font-weight:400;white-space:nowrap}
 [data-theme=lilac]:not([data-lilac-page=home]) .lilac-profile{background:#f0f0f0;color:#252525;font-style:normal}
 [data-theme=lilac]:not([data-lilac-page=home]) .lilac-profile>span{display:none}
 [data-theme=lilac]:not([data-lilac-page=home]) .lilac-profile svg{display:block}
-[data-theme=lilac] header{height:40px;padding:0;display:flex;justify-content:center;background:transparent;position:relative;margin:0 0 14px;border:0}
-[data-theme=lilac] .month-nav{gap:4px;margin:0;width:100%;justify-content:space-between}
-[data-theme=lilac] .month-nav>.nav-btn{border:0;width:30px;height:30px;min-width:30px;background:#f0f0f0;font-size:20px}
-[data-theme=lilac] .month-label-btn.period{background:#f0f0f0;border:0;padding:8px 18px;min-width:0;flex:1;gap:10px;height:36px;border-radius:30px}
+[data-theme=lilac] header{display:none}
+[data-theme=lilac][data-lilac-page=account] .lilac-top-actions{display:none}
+[data-theme=lilac] .lilac-sprint-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:14px}
+[data-theme=lilac] .lilac-sprint-nav>.nav-btn{border:0;width:36px;height:36px;min-width:36px;background:#f0f0f0;font-size:20px}
+[data-theme=lilac] .lilac-topbar .month-label-btn.period{display:flex;background:#f0f0f0;border:0;padding:8px 10px;min-width:0;gap:6px;min-height:36px;border-radius:30px}
 [data-theme=lilac] .period-text b{font-size:12px;font-weight:400}
 [data-theme=lilac] .period-text span{display:none}
 [data-theme=lilac] .cal-drop-arrow{display:block;font-size:9px}
@@ -81,18 +80,15 @@
 [data-theme=lilac] .lilac-bottom-nav button{border:0;flex:1;min-width:0;height:60px;border-radius:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:#2b2c2b;color:#fff;cursor:pointer;font-size:11px}
 [data-theme=lilac] .lilac-bottom-nav button[aria-current=page]{background:#fff;color:#262726}
 [data-theme=lilac] .lilac-bottom-nav svg{width:20px;height:20px}
-[data-theme=lilac][data-lilac-page=analytics] header{height:0;margin:0}
-[data-theme=lilac][data-lilac-page=analytics] header .month-nav{height:0}
-[data-theme=lilac][data-lilac-page=analytics] header .nav-btn,[data-theme=lilac][data-lilac-page=analytics] header #month-label{display:none}
-[data-theme=lilac][data-lilac-page=analytics] .lilac-profile{background:radial-gradient(ellipse at 28% 30%,#90928d,transparent 50%),linear-gradient(40deg,#151a19,#545e55);color:#fff;font-family:Georgia,serif;font-style:italic}
-[data-theme=lilac][data-lilac-page=analytics] .lilac-profile>span{display:block}
-[data-theme=lilac][data-lilac-page=analytics] .lilac-profile>svg{display:none}
-
 /* List screens use independent cards instead of the old spreadsheet. */
 [data-theme=lilac] [data-lilac-panel]{background:transparent;border-radius:0;overflow:visible}
-[data-theme=lilac] [data-lilac-panel] .section-header{padding:8px 2px 18px;flex-direction:column;align-items:flex-start;gap:5px}
-[data-theme=lilac] [data-lilac-panel] .section-header h2{font-size:22px;letter-spacing:-.8px;font-weight:400}
-[data-theme=lilac] [data-lilac-panel] .sub{font-size:11px;white-space:normal;color:#676767}
+[data-theme=lilac] [data-lilac-panel] .section-header{padding:0 0 10px;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
+[data-theme=lilac] [data-lilac-panel] .section-header h2{display:none}
+[data-theme=lilac] [data-lilac-panel] .sub{font-size:12px;white-space:normal;color:#676767;flex:1;min-width:0}
+[data-theme=lilac] [data-lilac-panel] .sub:empty{display:none}
+[data-theme=lilac] [data-lilac-panel] .section-header .budget-disclosure{margin:0;flex:0 0 auto;border-radius:18px}
+[data-theme=lilac] [data-lilac-panel] .section-header .budget-disclosure[open]{flex-basis:100%}
+[data-theme=lilac] [data-lilac-panel] .section-header .budget-disclosure>summary{min-height:36px;padding:8px 12px;font-size:12px;gap:8px}
 [data-theme=lilac] .thead{display:none}
 [data-theme=lilac] .row-wrap{padding:0;margin:0 0 11px;border-radius:22px;background:#eeeef0;overflow:hidden}
 [data-theme=lilac] [data-lilac-panel=payments] .row-wrap:nth-child(2n+1){background:#ccdc83}
@@ -123,16 +119,16 @@
 [data-theme=lilac] .r-plan>.mini-btn{width:24px;height:32px;font-size:19px}
 [data-theme=lilac] .r-plan>.rem{padding:0 2px;text-align:right;min-height:36px;font-size:12px;white-space:nowrap}
 [data-theme=lilac] .r-plan>.ci[data-f=planned],[data-theme=lilac] .r-plan>.ci[data-f=actual]{border-radius:6px;padding:6px 2px;height:36px;min-height:36px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums}
-[data-theme=lilac] .r-plan>.ci[data-f=planned]{color:#6c578b;background:#dfd5eb66}
-[data-theme=lilac] .r-plan>.ci[data-f=actual]{color:#304764;background:#ffffff80;font-weight:600}
-[data-theme=lilac] .r-plan>.rem.pos{color:#386534}
-[data-theme=lilac] .expense-key{display:flex;justify-content:flex-end;gap:14px;margin:-6px 4px 10px;font-size:12px;color:#6c578b}
+[data-theme=lilac] .r-plan>.ci[data-f=planned]{color:var(--viz-plan);background:#fff7ed}
+[data-theme=lilac] .r-plan>.ci[data-f=actual]{color:var(--viz-actual);background:#eff6ff;font-weight:600}
+[data-theme=lilac] .r-plan>.rem.pos{color:var(--viz-left)}
+[data-theme=lilac] .expense-key{display:flex;justify-content:flex-end;gap:14px;margin:-6px 4px 10px;font-size:12px;color:var(--viz-plan)}
 [data-theme=lilac] .expense-key>span{display:flex;align-items:center;gap:5px}
-[data-theme=lilac] .expense-key>span::before{content:'';width:8px;height:8px;background:#bcacd3;border-radius:2px}
-[data-theme=lilac] .expense-key .key-actual{color:#304764}
-[data-theme=lilac] .expense-key .key-actual::before{background:#3f526f}
-[data-theme=lilac] .expense-key .key-left{color:#386534}
-[data-theme=lilac] .expense-key .key-left::before{background:#74936f}
+[data-theme=lilac] .expense-key>span::before{content:'';width:8px;height:8px;background:var(--viz-plan);border-radius:2px}
+[data-theme=lilac] .expense-key .key-actual{color:var(--viz-actual)}
+[data-theme=lilac] .expense-key .key-actual::before{background:var(--viz-actual)}
+[data-theme=lilac] .expense-key .key-left{color:var(--viz-left)}
+[data-theme=lilac] .expense-key .key-left::before{background:var(--viz-left)}
 [data-theme=lilac] .badge.reserve{background:#ffffff70;color:#495135;font-size:10px;padding:2px 6px;align-self:flex-start}
 [data-theme=lilac] .cat-tabs{padding:0 0 17px;gap:5px;flex-wrap:nowrap;overflow:auto}
 [data-theme=lilac] .cat-tab{background:#eee;border:0;padding:10px 15px;font-size:12px;font-weight:400;min-height:36px;color:#444;flex-shrink:0}
@@ -159,7 +155,6 @@
 [data-theme=lilac] .budget-legend>div{flex-direction:row;align-items:center;gap:8px}
 [data-theme=lilac] .budget-legend dt{gap:8px;font-size:14px}
 [data-theme=lilac] .budget-legend dd{font-size:14px;font-weight:700}
-[data-theme=lilac] .lilac-analytics h2{font-size:21px;font-weight:400;letter-spacing:-.8px;margin:3px 0 12px}
 [data-theme=lilac] .lilac-stat-pills{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:24px}
 [data-theme=lilac] .lilac-stat-pills>div{display:flex;align-items:center;justify-content:space-between;gap:5px;background:#afa2d2;border-radius:40px;padding:6px 6px 6px 13px;min-width:0;min-height:42px;font-size:11px}
 [data-theme=lilac] .lilac-stat-pills>div:nth-child(2){background:#eee}
@@ -167,24 +162,22 @@
 [data-theme=lilac] .lilac-stat-pills>div:nth-child(4){background:#ccdc83}
 [data-theme=lilac] .lilac-stat-pills b{background:#fff;color:#252725;border-radius:30px;padding:9px 8px;min-width:63px;text-align:center;white-space:nowrap;font-size:10px;font-weight:400}
 [data-theme=lilac] .lilac-chart-tabs{display:flex;gap:5px;margin-bottom:14px;align-items:center}
-[data-theme=lilac] .lilac-chart-tabs>.lilac-chart-calendar{width:36px;height:36px;border-radius:50%;background:#eee;display:grid;place-items:center;padding:0}
-[data-theme=lilac] .lilac-chart-calendar svg{width:17px;height:17px}
 [data-theme=lilac] .lilac-chart-tabs>button{background:#eee;border:0;border-radius:30px;padding:11px 17px;font-size:11px;cursor:pointer}
 [data-theme=lilac] .lilac-chart-tabs>button[aria-pressed=true]{background:#ccdc83}
 [data-theme=lilac] .lilac-bars{display:grid;grid-template-columns:repeat(var(--bar-count),minmax(40px,1fr));gap:8px;min-height:270px;align-items:start;overflow-x:auto}
 [data-theme=lilac] .lilac-bar{min-width:0;background:transparent;border:0;display:flex;flex-direction:column;padding:0;cursor:pointer;color:#252525;align-items:center;font-family:inherit}
 [data-theme=lilac] .lilac-bar-track{width:100%;height:220px;border-radius:13px;background:#eee;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
-[data-theme=lilac] .lilac-bar-track>i{display:block;border-radius:12px 12px 0 0;background-image:repeating-linear-gradient(125deg,transparent 0 6px,#ffffff25 6px 7px);min-height:0;flex-shrink:0}
-[data-theme=lilac] .lilac-bar-actual{background-color:#282928}
-[data-theme=lilac] .lilac-bar-over{background-color:#afa2d2}
-[data-theme=lilac] .lilac-bar-left{background-color:#ccdc83}
+[data-theme=lilac] .lilac-bar-track>i{display:block;border-radius:0;min-height:0;flex-shrink:0;box-shadow:inset 0 2px #fff}
+[data-theme=lilac] .lilac-bar-actual{background:var(--viz-actual)}
+[data-theme=lilac] .lilac-bar-over{background:var(--viz-over-pattern)}
+[data-theme=lilac] .lilac-bar-left{background:var(--viz-left)}
 [data-theme=lilac] .lilac-bar-name{font-size:10px;display:block;line-height:1.35;margin-top:9px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 [data-theme=lilac] .lilac-bar>b{font-size:9px;font-weight:400;white-space:nowrap;margin-top:8px;background:#eee;border-radius:30px;min-height:27px;padding:8px 5px;min-width:100%}
 [data-theme=lilac] .lilac-chart-legend{display:flex;flex-wrap:wrap;gap:11px;margin:12px 0 8px;color:#666;font-size:10px}
 [data-theme=lilac] .lilac-chart-legend>span{display:flex;align-items:center;gap:4px}
-[data-theme=lilac] .lilac-chart-legend i{width:6px;height:6px;background:#282928;border-radius:50%}
-[data-theme=lilac] .lilac-chart-legend>span:nth-child(2) i{background:#afa2d2}
-[data-theme=lilac] .lilac-chart-legend>span:nth-child(3) i{background:#ccdc83}
+[data-theme=lilac] .lilac-chart-legend i{width:10px;height:10px;background:var(--viz-actual);border-radius:2px}
+[data-theme=lilac] .lilac-chart-legend>span:nth-child(2) i{background:var(--viz-over-pattern)}
+[data-theme=lilac] .lilac-chart-legend>span:nth-child(3) i{background:var(--viz-left)}
 [data-theme=lilac] .lilac-chart-total{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #eee;padding-top:8px;font-size:11px}
 [data-theme=lilac] .lilac-chart-total b{font-size:20px;font-weight:400;letter-spacing:-.7px}
 [data-theme=lilac] .lilac-chart-note{font-size:11px;line-height:1.5;color:#777;margin:10px 0 0}
@@ -275,6 +268,10 @@
  [data-theme=lilac] .cal-popup{top:115px}
 }
 @media(max-width:360px){
+ [data-theme=lilac] .lilac-page-title{font-size:15px}
+ [data-theme=lilac] .lilac-topbar{gap:6px}
+ [data-theme=lilac] .lilac-topbar .month-label-btn.period{padding-inline:8px}
+ [data-theme=lilac] .lilac-topbar .period-text b{font-size:11px}
  [data-theme=lilac] .r-plan .remaining-full{display:none}
  [data-theme=lilac] .r-plan .remaining-short{display:inline}
  [data-theme=lilac] #app{padding:20px 15px calc(180px + env(safe-area-inset-bottom))}
