@@ -26,6 +26,8 @@
 ## Чек-лист выпуска
 
 - [x] Рабочая копия проходит локальные проверки и собирает артефакт Pages.
+- [x] GitHub Actions проверяет `codex/budget-release` на Linux с Chromium.
+  [Первый успешный запуск](https://github.com/Rustam-Bikiteev/budget-app/actions/runs/45274052322).
 - [ ] Staging. Проверить настоящий Supabase Auth, PostgREST и Realtime с двумя
   участниками одной семьи и посторонним аккаунтом. Проверить конкурирующие записи
   из отдельных PostgreSQL-соединений и повтор после сбоя.
