@@ -120,7 +120,7 @@
 [data-theme=lilac][data-lilac-page=planned] .expense-fab{right:max(20px,calc((100vw - 480px)/2 + 18px))}
 [data-theme=lilac] #planned-body .row-wrap{margin-bottom:4px;border-radius:10px;background:#f2eff7}
 [data-theme=lilac] #planned-body .row-wrap:nth-child(2n){background:#ebe5f3}
-[data-theme=lilac] .row.r-plan{grid-template-columns:18px minmax(48px,2.6fr) minmax(34px,.8fr) minmax(34px,.8fr) minmax(42px,.9fr) 32px 32px;grid-template-rows:var(--tap-size);min-height:var(--tap-size);padding:2px 4px;gap:0 2px}
+[data-theme=lilac] .row.r-plan{grid-template-columns:18px minmax(0,1fr) 48px 48px minmax(42px,max-content) 32px 32px;grid-template-rows:var(--tap-size);min-height:var(--tap-size);padding:2px 4px;gap:0 2px}
 [data-theme=lilac] .row.r-plan>*{grid-column:auto;grid-row:1}
 [data-theme=lilac] .row.r-plan::before,[data-theme=lilac] .row.r-plan::after,[data-theme=lilac] .row.r-plan>.rem::before{content:none;display:none}
 [data-theme=lilac] .r-plan>.cloud-category{width:16px;height:16px}
@@ -129,7 +129,11 @@
 [data-theme=lilac] .r-plan .badge{display:none}
 [data-theme=lilac] .r-plan>.mini-btn{font-size:19px}
 [data-theme=lilac] .r-plan>.rem{padding:0 2px;text-align:right;min-height:var(--tap-size);font-size:12px;white-space:nowrap}
-[data-theme=lilac] .r-plan>.ci[data-f=planned],[data-theme=lilac] .r-plan>.ci[data-f=actual]{border-radius:6px;padding:6px 2px;min-height:var(--tap-size);text-align:right;font-size:var(--text-small)}
+[data-theme=lilac] .r-plan>.ci[data-f=planned],[data-theme=lilac] .r-plan>.ci[data-f=actual]{border-radius:6px;padding:6px 2px;min-height:var(--tap-size);text-align:left;font-size:var(--text-small)}
+@supports(field-sizing:content){
+ [data-theme=lilac] .row.r-plan{grid-template-columns:18px minmax(0,1fr) minmax(48px,max-content) minmax(48px,max-content) minmax(42px,max-content) 32px 32px}
+ [data-theme=lilac] .r-plan>.ci:is([data-f=planned],[data-f=actual]){field-sizing:content;width:auto;min-width:48px}
+}
 [data-theme=lilac] .r-plan>.ci[data-f=planned]{color:var(--viz-plan);background:#fff7ed}
 [data-theme=lilac] .r-plan>.ci[data-f=actual]{color:var(--viz-actual);background:#eff6ff;font-weight:600}
 [data-theme=lilac] .row .ci.bad{background:var(--red-light)}

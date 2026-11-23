@@ -30,7 +30,7 @@
 | Доход, накопления, баланс, формулы | `shared/domain.mjs`, `shared/core.js`, `app.js` | `localSummary`, `cloudSummary`, `plannedTotalsFor`, `saveMonthFields`, `renderSummary`, `calc` |
 | Статус записи, ошибки, конкурентные операции | `shared/core.js`; HTML handlers обоих режимов, `app.js` | `runSaveAction`, `renderSaveStatus`, `execConfirm`, `saveQuick`; `#save-status` |
 | Графики, проценты, аналитика | `app.js`, `ui/lilac.js` | `renderBudgetChart`, `chartShare`, `lilacRender`, `lilacRenderBars` |
-| Траты, план/факт, CRUD | `shared/core.js`, `app.js` | `renderPlanned`, `saveEntry`, `addEntry`, `deleteEntry`, `patchPlannedRow` |
+| Траты, план/факт, CRUD и ширина сумм | `shared/core.js`, `app.js`, `ui/lilac.css` | `renderPlanned`, `saveEntry`, `addEntry`, `deleteEntry`, `patchPlannedRow`; `.r-plan`, `field-sizing` |
 | Платежи, оплачено, резерв | `shared/domain.mjs`, `app.js`, `shared/core.js`; `storage/` | `normalizeEntry`, `isReserve`, `isPaid`, `reserveControl`, `setReserve`, `setPaid` |
 | Расход вне плана, источники, перерасход | `app.js`, `index.html` | `openQuick`, `saveQuick`, `quickSources`, `openCover`, `coverFrom` |
 | Суммы, клавиатура, калькулятор | `app.js`, `ui/lilac.js`, `index.html` | `parseSum`, `openPad`, `renderPad`, `padKey`, `padDone` |

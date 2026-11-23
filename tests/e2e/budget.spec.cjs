@@ -154,6 +154,46 @@ test('cloud: clear plan labels, discoverable editor and failed entry save can re
   await page.locator('.lilac-bottom-nav').getByRole('button', { name: 'Траты', exact: true }).click();
   const actual = page.locator('#planned-body [data-f=actual]').first();
   await expect(actual).toHaveCSS('min-height', '44px');
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 760 });
+    const widths = await page.locator('#planned-body .r-plan').first().evaluate(row => {
+      const name = row.querySelector('[data-f=name]');
+      const amounts = [...row.querySelectorAll('[data-f=planned], [data-f=actual]')];
+      const fields = [name, ...amounts];
+      const original = fields.map(field => field.value);
+      const measure = field => {
+        const style = getComputedStyle(field);
+        const text = document.createElement('span');
+        text.style.cssText = 'position:absolute;visibility:hidden;white-space:pre';
+        text.style.fontFamily = style.fontFamily;
+        text.style.fontSize = style.fontSize;
+        text.style.fontWeight = style.fontWeight;
+        text.style.fontVariantNumeric = style.fontVariantNumeric;
+        text.textContent = field.value;
+        document.body.append(text);
+        const available = field.getBoundingClientRect().width - parseFloat(style.borderLeftWidth) -
+          parseFloat(style.borderRightWidth) - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        const fits = text.getBoundingClientRect().width <= available;
+        text.remove();
+        return { fits, width: field.clientWidth, align: style.textAlign };
+      };
+      name.value = 'Длинное название запланированной покупки';
+      amounts.forEach(field => { field.value = '10000'; });
+      const short = fields.map(measure);
+      amounts.forEach(field => { field.value = '12345678'; });
+      const long = fields.map(measure);
+      const contained = row.lastElementChild.getBoundingClientRect().right <= row.getBoundingClientRect().right;
+      fields.forEach((field, index) => { field.value = original[index]; });
+      return { short, long, contained };
+    });
+    expect(widths.short.slice(1)).toMatchObject([{ fits: true, align: 'left' }, { fits: true, align: 'left' }]);
+    expect(widths.long.slice(1)).toMatchObject([{ fits: true }, { fits: true }]);
+    widths.long.slice(1).forEach((field, i) => expect(field.width).toBeGreaterThan(widths.short[i + 1].width));
+    expect(widths.long[0].width).toBeLessThan(widths.short[0].width);
+    expect(widths.long[0].fits).toBe(false);
+    expect(widths.contained).toBe(true);
+  }
+  await page.setViewportSize({ width: 320, height: 760 });
   const remove = page.getByRole('button', { name: 'Удалить: Продукты', exact: true });
   await expect(remove).toHaveCSS('min-height', '44px');
   await remove.click();
