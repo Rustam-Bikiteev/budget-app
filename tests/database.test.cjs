@@ -232,6 +232,21 @@ test('PostgreSQL: quick matching, source rollback, month deletion and onboarding
   assert.deepEqual(await mutate(db,users[0],h.id,'delete_month',payload,deletion),deleted);
 });
 
+test('PostgreSQL: legacy real amounts require exact whole numbers and allow owner-only import',async t=>{
+  const db=await fixture(); t.after(()=>db.close()); await db.exec(read('tests/fixtures/budget-legacy.sql'));
+  await db.exec('ALTER TABLE months ALTER COLUMN income TYPE real');
+  await assert.rejects(db.exec(prepare),/legacy_unsupported_real_amount/);
+  await db.exec('UPDATE months SET income=1234567 WHERE id=41');
+  await db.exec('BEGIN'); await db.exec(prepare); await db.exec(migration); await db.exec(importer);
+  const h=(await db.query('SELECT budget_private.import_legacy($1) AS id',[users[0]])).rows[0].id;
+  assert.equal(Number((await month(db,users[0],41)).income),1234567);
+  assert.equal((await as(db,users[1],'SELECT * FROM months')).length,0);
+  assert.deepEqual((await as(db,users[0],'SELECT user_id,role FROM household_members WHERE household_id=$1',[h])),
+    [{user_id:users[0],role:'owner'}]);
+  await db.exec('ROLLBACK');
+  assert.equal((await db.query('SELECT pg_typeof(income)::text AS type FROM public.months')).rows[0].type,'real');
+});
+
 test('PostgreSQL: legacy preflight, fail-closed quarantine, explicit import, IDs/sums and rollback',async t=>{
   const db=await fixture(); t.after(()=>db.close()); await db.exec(read('tests/fixtures/budget-legacy.sql'));
   await assert.rejects(db.exec(migration),/legacy_preflight_required/);

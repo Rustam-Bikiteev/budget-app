@@ -20,7 +20,7 @@ BEGIN
     FOR c IN SELECT column_name,data_type FROM information_schema.columns WHERE table_schema='public' AND table_name=t LOOP
       IF NOT c.column_name=ANY(allowed) THEN RAISE EXCEPTION 'legacy_unknown_column: %.%',t,c.column_name; END IF;
       IF c.column_name IN ('id','month_id','year','month','half') AND c.data_type NOT IN ('integer','bigint')
-        OR c.column_name IN ('income','saved','transferred','planned','actual') AND c.data_type<>'numeric'
+        OR c.column_name IN ('income','saved','transferred','planned','actual') AND c.data_type NOT IN ('numeric','real')
         OR c.column_name IN ('type','category','name') AND c.data_type NOT IN ('text','character varying')
         THEN RAISE EXCEPTION 'legacy_incompatible_type: %.% %',t,c.column_name,c.data_type; END IF;
     END LOOP;
@@ -43,3 +43,18 @@ DO $$ DECLARE t text; p record; BEGIN
   END LOOP;
 END $$;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA budget_legacy FROM PUBLIC, anon, authenticated;
+
+-- Production legacy used real. Convert only whole amounts in the exact integer range.
+DO $$ DECLARE c record; unsupported boolean; BEGIN
+  FOR c IN SELECT table_name,column_name FROM information_schema.columns
+    WHERE table_schema='budget_legacy' AND table_name IN ('months','entries','backlog')
+      AND column_name IN ('income','saved','transferred','planned','actual') AND data_type='real'
+  LOOP
+    EXECUTE format('SELECT EXISTS (SELECT 1 FROM budget_legacy.%I WHERE %I IS NOT NULL AND
+      (%I NOT BETWEEN -16777216 AND 16777216 OR %I <> trunc(%I)))',
+      c.table_name,c.column_name,c.column_name,c.column_name,c.column_name) INTO unsupported;
+    IF unsupported THEN RAISE EXCEPTION 'legacy_unsupported_real_amount: %.%',c.table_name,c.column_name; END IF;
+    EXECUTE format('ALTER TABLE budget_legacy.%I ALTER COLUMN %I TYPE numeric USING %I::integer::numeric',
+      c.table_name,c.column_name,c.column_name);
+  END LOOP;
+END $$;

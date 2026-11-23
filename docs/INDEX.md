@@ -49,7 +49,7 @@
 | Бесплатный UI, mobile | `shared/core.css`, `free/index.html` | `.free-app`; CSS по DOM |
 | PWA, офлайн, кэш | `free/sw.js`, `manifest.webmanifest`, `free/manifest.webmanifest`, `free/index.html` | `CACHE`, `SHELL`, `install`, `activate`, `fetch` |
 | SQL, семьи, RLS, RPC, приглашения | `supabase/migrations/001_households.sql` | `budget_is_member`, `budget_create_household`, `budget_list_households`, `budget_household_details`, `budget_create_invite`, `budget_join_household`, `budget_mutate`; `households`, `household_members`, `revision` |
-| SQL legacy migration / backup / rollback | `supabase/legacy/prepare.sql`, `supabase/legacy/import.sql`; `docs/ARCHITECTURE.md` | `import_legacy`, `budget_legacy`, preflight; `supabase_setup.sql` отключён; `supabase_add_transferred.sql` только историческая одиночная колонка |
+| SQL legacy migration / backup / rollback | `supabase/legacy/prepare.sql`, `supabase/legacy/import.sql`; `docs/ARCHITECTURE.md` | `import_legacy`, `budget_legacy`, preflight, `legacy_unsupported_real_amount`; `supabase_setup.sql` отключён; `supabase_add_transferred.sql` только историческая одиночная колонка |
 | Демо, темы, референс | `design/preview.js`, `design/demo.js`, `design/themes.css`, `design/reference.html` | [design/README.md](../design/README.md) |
 | Проверки, CI, выпуск Pages | `package.json`, `package-lock.json`, `playwright.config.cjs`, `.github/workflows/pages.yml`, `tests/package-pages.cjs` | `check`, `checks`, `package`, `deploy`; artifact `_site/` |
 | Локальный запуск без Supabase | `tests/e2e/server.cjs`, `design/preview.html`, `design/demo.js`, `free/index.html` | loopback `127.0.0.1:8138`; preview в памяти, `/free/` в изолированной по origin IndexedDB |

@@ -374,11 +374,14 @@ token возвращает одинаковый `invalid_invite`. Email ново
 ### Миграция старой семьи
 
 Не выполнять на production без отдельного подтверждения и staging-прогона.
-Production schema неизвестна; `prepare.sql` принимает только подтверждённую fixture:
-id/month_id integer или bigint, year/month/half integer/bigint, деньги numeric,
+`prepare.sql` принимает подтверждённую legacy-схему:
+id/month_id integer или bigint, year/month/half integer/bigint, деньги numeric или real,
 name/category/type text/varchar. Набор колонок строгий, transferred опционален.
 Неизвестные колонки/типы или отсутствующие таблицы дают `legacy_*` и отказывают.
-Даты создания, UUID ID, float/money суммы, уже добавленный is_reserve требуют отдельной
+В закрытом карантине `real` преобразуется в `numeric` через целое число. Принимаются
+только целые значения от −16 777 216 до 16 777 216 включительно. Иные значения
+останавливают транзакцию. `numeric` сохраняется с исходной точностью.
+Даты создания, UUID ID, double precision/money суммы и колонка is_reserve требуют отдельной
 проверенной миграции, не автоматического преобразования. Ограничения новой схемы
 дополнительно отклонят дубли периодов, orphan FK и несовместимые суммы.
 
