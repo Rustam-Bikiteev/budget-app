@@ -1,6 +1,5 @@
+const { runtimeSource } = require('./runtime-source.cjs');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
 const { test } = require('node:test');
 const vm = require('node:vm');
 
@@ -19,10 +18,11 @@ function setup(refresh = async () => {}) {
     refreshData: async () => { calls++; await refresh(); },
     flash() {},
   });
+  context.providedRefresh = context.refreshData;
   for (const path of ['shared/core.js', 'app.js']) {
-    vm.runInContext(readFileSync(join(__dirname, '..', path), 'utf8'), context);
+    vm.runInContext(runtimeSource(path), context);
   }
-  vm.runInContext('activeModal = () => null; flash = () => {}; initPullToRefresh()', context);
+  vm.runInContext('activeModal = () => null; flash = () => {}; lifecycle.refresh = providedRefresh; initPullToRefresh()', context);
   const start = (x = 0, y = 0, interactive = false) => listeners.touchstart({
     touches: [{ clientX: x, clientY: y }], target: { closest: () => interactive },
   });

@@ -1,10 +1,11 @@
+const { runtimeSource } = require('./runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { test } = require('node:test');
 const vm = require('node:vm');
 
-const source = readFileSync(join(__dirname, '../shared/core.js'), 'utf8');
+const source = runtimeSource('shared/core.js');
 
 function setup(updateMonth) {
   const fields = {

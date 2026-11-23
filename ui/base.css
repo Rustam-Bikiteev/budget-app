@@ -1,12 +1,8 @@
 /* Shared form and layout styles for the production lavender interface. */
+:root{--dialog-shadow:0 24px 90px #0002;--dialog-pad:24px}
 html{scroll-behavior:smooth}
-body{font-family:Arial,'Segoe UI',sans-serif;font-size:16px;background:var(--bg);line-height:1.4;-webkit-font-smoothing:antialiased}
-button,input,select{font-family:inherit}
+body{font-family:Arial,'Segoe UI',sans-serif;background:var(--bg);-webkit-font-smoothing:antialiased}
 button,a,input,select,summary{-webkit-tap-highlight-color:transparent}
-button{touch-action:manipulation}
-button:disabled{cursor:default}
-button:focus-visible,a:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--chart-3);outline-offset:3px}
-input::placeholder{color:var(--muted);opacity:1}
 header{height:88px;padding:0 max(28px,calc((100vw - 1120px)/2));background:var(--bg);border:0;box-shadow:none;gap:16px;position:relative;z-index:100}
 header h1{display:flex;align-items:center;gap:11px;font-size:19px;letter-spacing:-.7px;font-weight:600}
 .app-brand-mark{display:grid;place-items:center;width:40px;height:40px;background:var(--text);color:var(--bg);font-size:28px;border-radius:14px;font-weight:400}
@@ -52,8 +48,8 @@ main{max-width:1120px;padding:16px 28px 70px;gap:24px}
 .r-mand{grid-template-columns:44px 32px minmax(0,1fr) 125px 40px}
 .r-plan{grid-template-columns:32px minmax(0,1fr) 118px 118px 118px 40px 40px}
 .r-back{grid-template-columns:32px minmax(0,1fr) 130px 40px 40px}
-.row .ci{font-size:15px;padding:12px 10px;min-height:44px;border-radius:9px;transition:background .15s}.row .ci:focus{color:var(--text);background:var(--blue-light);outline:2px solid var(--blue);outline-offset:-2px}
-.ci.r{font-variant-numeric:tabular-nums}.row .ci.bad{background:var(--red-light)}
+.row .ci{font-size:15px;padding:12px 10px;min-height:44px;border-radius:9px;transition:background .15s}.row .ci:focus{color:var(--text);background:var(--blue-light)}
+.row .ci.bad{background:var(--red-light)}
 .cloud-category{width:16px;height:16px;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--cat)}
 .mini-btn{width:36px;height:36px;border-radius:50%;font-size:21px;background:var(--bg);font-weight:400}.mini-btn.back{color:var(--muted2)}
 .mini-btn.del:hover{color:var(--red);background:var(--red-light)}
@@ -74,17 +70,16 @@ main{max-width:1120px;padding:16px 28px 70px;gap:24px}
 .empty-state{border-radius:var(--card-radius);background:var(--surface);padding:65px 26px;border:1px solid var(--border)}
 .empty-state h2{font-weight:400;font-size:28px;letter-spacing:-.8px}.empty-state p{font-size:14px;line-height:1.7}.copy-option{font-size:14px}
 .btn-primary,.confirm-ok{border:0;border-radius:30px;min-height:46px;background:var(--blue);color:var(--accent-ink);font-size:14px;font-weight:500;padding:12px 23px}
-.btn-primary:hover,.confirm-ok:hover,.sheet .confirm-ok:hover{background:var(--blue);filter:brightness(.95);color:var(--accent-ink)}
-.btn-primary:disabled,.confirm-ok:disabled{opacity:.5;background:var(--blue)}
-.modal-overlay{background:#10131566;backdrop-filter:blur(8px);padding:24px}
-.sheet,.confirm-box,.pad,.login-box{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--card-radius);padding:28px;box-shadow:0 24px 90px #0002;max-width:440px;max-height:calc(100dvh - 48px);overflow:auto}
+.btn-primary:hover:not(:disabled),.confirm-ok:hover:not(:disabled),.sheet .confirm-ok:hover:not(:disabled){background:var(--blue);filter:brightness(.95);color:var(--accent-ink)}
+.modal-overlay{background:#10131566;backdrop-filter:blur(8px)}
+.sheet,.confirm-box,.pad,.login-box{color:var(--text);border:1px solid var(--border);padding:28px;max-width:440px}
 .sheet{gap:18px}.sheet h3,.confirm-title{font-size:25px;font-weight:400;line-height:1.15;letter-spacing:-1px}
-.sheet p,.confirm-name{font-size:14px;line-height:1.6;color:var(--muted2)}.confirm-name{margin:14px 0 26px}
+.sheet p,.confirm-name{font-size:var(--text-small);line-height:1.6;color:var(--muted2)}.confirm-name{margin:14px 0 26px}
 .sheet input,.sheet select,.login-box input{min-height:52px;border:1px solid var(--border);border-radius:14px;padding:13px 16px;background:var(--bg);color:var(--text);font-size:16px;line-height:1.4}
-.sheet input:focus,.sheet select:focus,.login-box input:focus{outline:2px solid var(--blue);border-color:var(--blue)}
+
 .sheet #q-sum{font-size:32px;letter-spacing:-1px;padding:18px 16px;min-height:80px;font-weight:400}.sheet #q-sum::placeholder{font-size:24px}
 .sheet select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 19px) 24px,calc(100% - 14px) 24px;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
-.sheet label{font-size:14px;font-weight:400}.sheet .confirm-ok{background:var(--blue);color:var(--accent-ink)}
+.sheet label{font-size:var(--text-small);font-weight:400}.sheet .confirm-ok{background:var(--blue);color:var(--accent-ink)}
 .who{gap:8px}.who .cat-tab{padding:11px 12px;min-height:42px}.confirm-btns{gap:10px}.confirm-btns button{flex:1;min-height:48px}
 .confirm-cancel{border:1px solid var(--border);border-radius:30px;font-weight:400;font-size:14px;padding:12px 20px;background:transparent;color:var(--text)}
 .confirm-cancel:hover{background:var(--bg)}
@@ -145,7 +140,7 @@ main{max-width:1120px;padding:16px 28px 70px;gap:24px}
   .badge{margin:0 0 4px 4px;align-self:flex-start;font-size:10px;padding:2px 6px}.cat-tabs{padding:0 20px 16px;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.cat-tab{min-height:39px;padding:10px 17px;flex-shrink:0;font-size:12px}
   .add-row{padding:14px 20px 20px}.add-row.split{flex-direction:column;gap:9px}.add-btn{min-height:46px;font-size:13px}.hint{font-size:12px;padding:10px 20px 0}
   .tfoot.r-plan{display:flex;flex-wrap:wrap;justify-content:space-between;padding:8px;gap:4px;min-height:auto}.tfoot>div{font-size:11px;padding:3px!important}.tfoot>div:empty{display:none}
-  .modal-overlay{padding:14px}.pad-overlay{padding:0}.sheet,.confirm-box{padding:25px 22px;border-radius:28px;max-height:calc(100dvh - 28px)}.sheet{gap:15px}.sheet h3,.confirm-title{font-size:26px}.sheet p{font-size:13px}.sheet .who .cat-tab{font-size:13px}.confirm-btns button{padding:11px 14px}
+  .modal-overlay{--dialog-pad:14px}.pad-overlay{padding:0}.sheet,.confirm-box{padding:25px 22px;border-radius:28px}.sheet{gap:15px}.sheet h3,.confirm-title{font-size:26px}.sheet p{font-size:13px}.sheet .who .cat-tab{font-size:13px}.confirm-btns button{padding:11px 14px}
   .cal-popup{position:fixed;top:80px;left:50%;transform:translateX(-50%);width:calc(100vw - 36px);min-width:0;max-width:360px}.cal-months{gap:7px}
   .empty-state{padding:42px 22px}.empty-state h2{font-size:25px}.empty-state p{font-size:13px}.copy-option{font-size:12px}
   .login-box{padding:30px 25px}.login-caption{font-size:13px}

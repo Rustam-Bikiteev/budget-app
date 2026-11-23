@@ -1,25 +1,14 @@
-// Общая логика обеих версий бюджета: корневой index.html (Supabase, общий с Настей)
-// и free/index.html (IndexedDB, для всех). Правка здесь меняет обе версии сразу.
-//
-// Подключается обычным <script> до скрипта версии. Версия обязана определить:
-//   api    — хранилище: listMonths, getMonth, createMonth, updateMonth,
-//            createEntry, updateEntry, deleteEntry, entryToBacklog,
-//            listBacklog, createBacklog, updateBacklog, deleteBacklog, backlogToEntry
-//   init() — полная перезагрузка данных (вызывает loadAll)
-//   cats   — список категорий [{ id, name, color }], последняя — категория по умолчанию
-// Необязательно: onEscape() — Esc, когда подтверждение закрыто;
-//   coreConfig.copyPrevByDefault — галочка «скопировать план» включена сразу.
+import * as finance from './domain.mjs';
 
+// Shared controller and local view. Dependencies are configured by the entry point.
 const MN = ['Январь','Февраль','Март','Апрель','Май','Июнь',
             'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
 const coreConfig = { copyPrevByDefault: false };
 
-const _today = new Date().getDate();
+const initial = finance.initialPeriod(new Date());
 const state = {
-  year: new Date().getFullYear(),
-  month: new Date().getMonth() + 1,
-  half: (_today >= 10 && _today <= 24) ? 1 : 2,
+  ...initial,
   monthId: null,
   income: 0,
   saved: 0,
@@ -31,6 +20,21 @@ const state = {
 };
 
 let cats = [];
+let api = globalThis.api;
+const lifecycle = { reload: null, escape: null, refresh: null, logout: null };
+const viewHooks = { summary: () => {}, loaded: () => {}, modal: () => {} };
+function configureViewHooks(hooks) { Object.assign(viewHooks, hooks); }
+function setCategories(categories) { cats = categories; }
+function configureCore({ storage, categories, reload = loadAll, escape = null, refresh = null, logout = null, mode = 'local' }) {
+  api = storage; cats = categories; lifecycle.reload = reload; lifecycle.escape = escape; lifecycle.refresh = refresh; lifecycle.logout = logout;
+  coreConfig.copyPrevByDefault = true;
+  Object.assign(state, finance.initialPeriod(new Date(), mode));
+}
+function init() { return (lifecycle.reload || loadAll)(); }
+function onEscape() { lifecycle.escape?.(); }
+function refreshData() { return lifecycle.refresh ? lifecycle.refresh() : loadAll(); }
+function doLogout() { return lifecycle.logout?.(); }
+
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -81,24 +85,56 @@ function flash(text, isErr) {
   syncTimer = setTimeout(() => el.classList.remove('show'), isErr ? 5000 : 900);
 }
 
+// Await complete UI operations, including multi-write actions and confirmations.
+let savePending = 0;
+let saveFailed = false;
+let contextToken = 0;
+function renderSaveStatus() {
+  const el = $('save-status');
+  if (!el) return;
+  el.dataset.state = saveFailed ? 'error' : savePending ? 'saving' : 'saved';
+  el.textContent = saveFailed ? 'Не удалось сохранить' : savePending ? 'Сохраняется' : 'Сохранено';
+}
+async function runSaveAction(action) {
+  const context = contextToken;
+  // Some actions only open a confirmation. Their callback starts the write later.
+  let task;
+  try { task = action(); }
+  catch (error) {
+    saveFailed = true;
+    renderSaveStatus();
+    return false;
+  }
+  if (!task || typeof task.then !== 'function') return task;
+  if (!savePending) saveFailed = false;
+  savePending++;
+  renderSaveStatus();
+  try {
+    const result = await task;
+    if (context === contextToken && result === false) saveFailed = true;
+    return result;
+  } catch (error) {
+    if (context === contextToken) saveFailed = true;
+    return false;
+  } finally {
+    if (context === contextToken) { savePending--; renderSaveStatus(); }
+  }
+}
+
 // ── navigation ───────────────────────────────────────────────────────────────
 
 function shiftMonth(dir) {
-  if (dir > 0) {
-    if (state.half === 1) { state.half = 2; }
-    else { state.half = 1; state.month++; if (state.month > 12) { state.month = 1; state.year++; } }
-  } else {
-    if (state.half === 2) { state.half = 1; }
-    else { state.half = 2; state.month--; if (state.month < 1) { state.month = 12; state.year--; } }
-  }
+  Object.assign(state, finance.shiftPeriod(state, dir));
   loadCurrentMonth();
 }
 
 // ── load ─────────────────────────────────────────────────────────────────────
 
 async function loadAll() {
+  const context = contextToken;
   if (state.catFilter !== 'all' && !catById(state.catFilter)) state.catFilter = 'all';
   const [months, backlog] = await Promise.all([api.listMonths(), api.listBacklog()]);
+  if (context !== contextToken) return;
   state.allMonths = months;
   state.backlog = backlog;
   renderTabs();
@@ -106,10 +142,23 @@ async function loadAll() {
 }
 
 let loadToken = 0;
+function resetContext() {
+  contextToken++;
+  loadToken++;
+  Object.assign(state, { monthId: null, income: 0, saved: 0, entries: [], allMonths: [], backlog: [], catFilter: 'all', prevMonthId: null });
+  savePending = 0; saveFailed = false; renderSaveStatus();
+  clearTimeout(syncTimer);
+  $('sync-dot')?.classList.remove('show', 'err');
+  view.contextChanged?.();
+  for (const id of ['planned-body', 'mandatory-body', 'backlog-body']) { const el = $(id); if (el) el.replaceChildren(); }
+}
+
 async function loadCurrentMonth() {
   const token = ++loadToken;
   const { year, month, half } = state;
   $('month-label-text').textContent = `${MN[month-1]} ${year} · ${half === 1 ? '1-я пол.' : '2-я пол.'}`;
+
+  view.periodChanged?.();
 
   const found = state.allMonths.find(m => m.year === year && m.month === month && m.half === half);
 
@@ -123,6 +172,7 @@ async function loadCurrentMonth() {
     $('budget-view').classList.add('hidden');
     state.monthId = null; state.entries = [];
     renderBacklog();
+    viewHooks.loaded();
     return;
   }
 
@@ -142,12 +192,12 @@ async function loadCurrentMonth() {
 
   renderAll();
   renderBacklog();
+  viewHooks.loaded();
 }
 
 function findPrev(year, month, half) {
-  let py = year, pm = month, ph = half - 1;
-  if (ph < 1) { ph = 2; pm--; if (pm < 1) { pm = 12; py--; } }
-  return state.allMonths.find(m => m.year === py && m.month === pm && m.half === ph) || null;
+  const prev = finance.shiftPeriod({ year, month, half }, -1);
+  return state.allMonths.find(row => row.year === prev.year && row.month === prev.month && row.half === prev.half) || null;
 }
 
 // ── create month ─────────────────────────────────────────────────────────────
@@ -158,7 +208,7 @@ async function createCurrentMonth() {
   // период уже создан в другой вкладке или на другом устройстве
   if (res.error) { await init(); return; }
   upsert(state.allMonths, res);
-  loadCurrentMonth();
+  await loadCurrentMonth();
 }
 
 // ── save income / saved ───────────────────────────────────────────────────────
@@ -172,7 +222,6 @@ async function saveMonthFields() {
   await api.updateMonth(monthId, { income, saved });
   if (state.monthId !== monthId) return;
   state.income = income; state.saved = saved;
-  flash('Сохранено');
   renderSummary();
 }
 
@@ -180,12 +229,12 @@ async function saveMonthFields() {
 
 const catById = id => cats.find(c => c.id === id);
 const catColor = id => (catById(id) || {}).color || '#94a3b8';
-const defaultCat = () => cats[cats.length - 1].id;
+const defaultCat = () => (cats.find(category => category.default) || cats[cats.length - 1])?.id;
 
 function catSelect(cat, handler) {
   const opts = (catById(cat) ? '' : `<option value="${esc(cat)}" selected>—</option>`)
     + cats.map(c => `<option value="${c.id}" ${c.id === cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
-  return `<select aria-label="Категория" class="cat-sel" style="--cat:${catColor(cat)}" onchange="${handler}">${opts}</select>`;
+  return `<select aria-label="Категория" class="cat-sel" style="--cat:${catColor(cat)}" onchange="runSaveAction(() => ${handler})">${opts}</select>`;
 }
 
 function paintSelect(sel) { sel.style.setProperty('--cat', catColor(sel.value)); }
@@ -196,7 +245,7 @@ function filterCat(cat) {
   renderPlanned();
 }
 
-function renderTabs() {
+function localRenderTabs() {
   const tabs = [{ id: 'all', name: 'Все', color: 'var(--text)' }, ...cats];
   $('cat-tabs').innerHTML = tabs.map(c => `
     <button class="cat-tab ${state.catFilter === c.id ? 'active' : ''}" style="--cat:${c.color}"
@@ -207,11 +256,8 @@ function renderTabs() {
 
 function renderAll() { renderSummary(); renderMandatory(); renderPlanned(); }
 
-function renderSummary() {
-  const mandatory = state.entries.filter(e => e.type === 'mandatory').reduce((s, e) => s + e.planned, 0);
-  const spent     = state.entries.filter(e => e.type === 'planned').reduce((s, e) => s + e.actual, 0);
-  const allowed   = state.income - mandatory - state.saved;
-  const remain    = allowed - spent;
+function localRenderSummary() {
+  const { mandatory, spent, allowed, remain } = finance.localSummary(state);
 
   $('s-income').textContent    = fmt(state.income);
   $('s-mandatory').textContent = fmt(mandatory);
@@ -224,13 +270,13 @@ function renderSummary() {
   $('s-remain-card').classList.toggle('red-accent', remain < 0);
 }
 
-function renderMandatoryTotal() {
+function localRenderMandatoryTotal() {
   const rows = state.entries.filter(e => e.type === 'mandatory');
   $('mandatory-total').textContent = rows.length ? fmt(rows.reduce((s, e) => s + e.planned, 0)) : '';
   return rows;
 }
 
-function renderMandatory() {
+function localRenderMandatory() {
   const rows = renderMandatoryTotal();
   $('mandatory-body').innerHTML = rows.map(e => {
     const id = idArg(e.id);
@@ -239,26 +285,38 @@ function renderMandatory() {
       <td role="cell" class="col-cat">${catSelect(e.category, `onCatChange(${id},this)`)}</td>
       <td role="cell" class="col-name">
         <input class="ci" type="text" aria-label="Название записи" value="${esc(e.name)}" placeholder="Название"
-          onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
+          onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="cellKeydown(event)">
       </td>
       <td role="cell" class="col-num" onclick="this.querySelector('input')?.focus()">
         <input class="ci r" type="number" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
-          aria-label="Плановая сумма" data-field="planned" onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
+          aria-label="Плановая сумма" data-field="planned" onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="cellKeydown(event)">
       </td>
       <td role="cell" class="col-del"><button class="del-btn" aria-label="Удалить запись" onclick="deleteEntry(${id})">×</button></td>
     </tr>`;
   }).join('');
 }
 
-function plannedTotals() {
-  const all      = state.entries.filter(e => e.type === 'planned');
-  const filtered = state.catFilter === 'all' ? all : all.filter(e => e.category === state.catFilter);
-  const totPlan   = filtered.reduce((s, e) => s + e.planned, 0);
-  const totActual = filtered.reduce((s, e) => s + e.actual, 0);
-  return { filtered, totPlan, totActual, totRem: totPlan - totActual };
+function reserveControl(entry) {
+  const unavailable = api.capabilities?.reserveColumn === false;
+  return `<label><input type="checkbox" aria-label="Резерв: ${esc(entry.name || 'Без названия')}" ${entry.is_reserve ? 'checked' : ''}
+    ${unavailable ? 'disabled title="Сохранение признака резерва требует обновления облачной БД"' : ''}
+    onchange="runSaveAction(() => setReserve(${idArg(entry.id)},this.checked))"> Резерв</label>`;
 }
 
-function remInfo(e) {
+async function setReserve(id, value) {
+  if (api.capabilities?.reserveColumn === false) throw new Error('Требуется обновление облачной БД');
+  const row = state.entries.find(entry => entry.id === id);
+  if (!row || row.type !== 'mandatory') return;
+  await api.updateEntry(id, { is_reserve: value });
+  row.is_reserve = value;
+  renderMandatory(); renderSummary();
+}
+
+function localPlannedTotals() {
+  return finance.plannedTotalsFor(state.entries, state.catFilter);
+}
+
+function localRemInfo(e) {
   const rem = e.planned - e.actual;
   return {
     cls: rem > 0 ? 'rem-pos' : rem < 0 ? 'rem-neg' : 'rem-zero',
@@ -266,7 +324,7 @@ function remInfo(e) {
   };
 }
 
-function renderPlannedTotals() {
+function localRenderPlannedTotals() {
   const { filtered, totPlan, totActual, totRem } = plannedTotals();
   $('planned-total').textContent = filtered.length ? `${fmt(totActual)} из ${fmt(totPlan)}` : '';
   const foot = $('planned-foot');
@@ -287,7 +345,7 @@ function renderPlannedTotals() {
   }
 }
 
-function renderPlanned() {
+function localRenderPlanned() {
   const { filtered } = plannedTotals();
   $('planned-body').innerHTML = filtered.map(e => {
     const r = remInfo(e);
@@ -297,18 +355,18 @@ function renderPlanned() {
       <td role="cell" class="col-cat">${catSelect(e.category, `onCatChange(${id},this)`)}</td>
       <td role="cell" class="col-name">
         <input class="ci" type="text" aria-label="Название записи" value="${esc(e.name)}" placeholder="Название"
-          onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
+          onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="cellKeydown(event)">
       </td>
       <td role="cell" class="col-num" onclick="this.querySelector('input')?.focus()">
         <input class="ci r" type="number" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
-          aria-label="Плановая сумма" data-field="planned" onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
+          aria-label="Плановая сумма" data-field="planned" onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="cellKeydown(event)">
       </td>
       <td role="cell" class="col-num" onclick="this.querySelector('input')?.focus()">
         <input class="ci r" type="number" inputmode="decimal" value="${e.actual || ''}" placeholder="0"
-          aria-label="Фактическая сумма" data-field="actual" onblur="saveEntry(${id})" onkeydown="cellKeydown(event)">
+          aria-label="Фактическая сумма" data-field="actual" onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="cellKeydown(event)">
       </td>
       <td role="cell" class="col-num"><span class="rem-cell ${r.cls}">${r.text}</span></td>
-      <td role="cell" class="col-move"><button class="tobacklog-btn" aria-label="В бэклог" title="В бэклог" onclick="entryToBacklog(${id})">↓</button></td>
+      <td role="cell" class="col-move"><button class="tobacklog-btn" aria-label="В будущие покупки" title="В будущие покупки" onclick="runSaveAction(() => entryToBacklog(${id}))">↓</button></td>
       <td role="cell" class="col-del"><button class="del-btn" aria-label="Удалить запись" onclick="deleteEntry(${id})">×</button></td>
     </tr>`;
   }).join('');
@@ -332,7 +390,7 @@ function getRowValues(eid) {
   return data;
 }
 
-async function saveEntry(eid) {
+async function localSaveEntry(eid) {
   const monthId = state.monthId;
   const d = getRowValues(eid);
   if (!d) return;
@@ -350,7 +408,7 @@ async function saveEntry(eid) {
   else patchPlannedRow(eid);
 }
 
-function patchPlannedRow(eid) {
+function localPatchPlannedRow(eid) {
   const entry = state.entries.find(e => e.id === eid);
   if (!entry) return;
   const span = document.querySelector(`tr[data-eid="${eid}"] .rem-cell`);
@@ -381,7 +439,7 @@ function deleteEntry(eid) {
   });
 }
 
-async function addEntry(type) {
+async function localAddEntry(type) {
   if (!state.monthId) return;
   const monthId = state.monthId;
   const cat = (state.catFilter !== 'all' && type === 'planned') ? state.catFilter : defaultCat();
@@ -396,20 +454,23 @@ async function addEntry(type) {
   if (input) input.focus();
 }
 
-async function entryToBacklog(eid) {
+async function localEntryToBacklog(eid) {
   const item = await api.entryToBacklog(eid);
   state.entries = state.entries.filter(e => e.id !== eid);
   upsert(state.backlog, item);
   renderPlanned();
   renderSummary();
   renderBacklog();
-  flash('Перенесено в бэклог');
+  flash('Перенесено в будущие покупки');
 }
 
 // ── calendar ─────────────────────────────────────────────────────────────────
 
 let calYear = new Date().getFullYear();
 let calOpen = false;
+
+function isCalendarOpen() { return calOpen; }
+function closeCalendar() { calOpen = false; $('cal-popup').classList.add('hidden'); }
 
 function toggleCalendar(e) {
   e.stopPropagation();
@@ -474,6 +535,7 @@ function updateModalBackground() {
   document.querySelectorAll('header, main, .modal-overlay').forEach(el => {
     el.inert = !!active && el !== active;
   });
+  viewHooks.modal(!!active);
 }
 
 function openModal(overlay) {
@@ -520,7 +582,7 @@ function closeConfirm() {
 function execConfirm() {
   const cb = confirmCallback;
   closeConfirm();
-  if (cb) cb();
+  if (cb) return cb();
 }
 
 document.addEventListener('keydown', e => {
@@ -532,6 +594,8 @@ document.addEventListener('keydown', e => {
 // ── backlog ───────────────────────────────────────────────────────────────────
 
 let backlogOpen = false;
+
+function showBacklog() { if (!backlogOpen) toggleBacklog(); }
 
 function toggleBacklog() {
   backlogOpen = !backlogOpen;
@@ -545,7 +609,7 @@ function renderBacklogTotal() {
     ? fmt(state.backlog.reduce((s, b) => s + b.planned, 0)) : '';
 }
 
-function renderBacklog() {
+function localRenderBacklog() {
   renderBacklogTotal();
   $('backlog-body').innerHTML = state.backlog.map(b => {
     const id = idArg(b.id);
@@ -554,15 +618,15 @@ function renderBacklog() {
       <td role="cell" class="col-cat">${catSelect(b.category, `onBacklogCatChange(${id},this)`)}</td>
       <td role="cell" class="col-name">
         <input class="ci" type="text" aria-label="Название покупки" value="${esc(b.name)}" placeholder="Название"
-          onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
+          onblur="runSaveAction(() => saveBacklogEntry(${id}))" onkeydown="enterBlur(event)">
       </td>
       <td role="cell" class="col-num" onclick="this.querySelector('input')?.focus()">
         <input class="ci r" aria-label="Плановая сумма" type="number" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
-          onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
+          onblur="runSaveAction(() => saveBacklogEntry(${id}))" onkeydown="enterBlur(event)">
       </td>
       <td role="cell" class="col-move">
         <button class="move-btn" aria-label="Перенести в планируемые" title="Перенести в планируемые"
-          onclick="moveBacklogEntry(${id})" ${!state.monthId ? 'disabled' : ''}>+</button>
+          onclick="runSaveAction(() => moveBacklogEntry(${id}))" ${!state.monthId ? 'disabled' : ''}>+</button>
       </td>
       <td role="cell" class="col-del">
         <button class="del-btn" aria-label="Удалить запись" onclick="deleteBacklogEntry(${id})">×</button>
@@ -579,7 +643,7 @@ async function onBacklogCatChange(bid, sel) {
   item.category = sel.value;
 }
 
-async function saveBacklogEntry(bid) {
+async function localSaveBacklogEntry(bid) {
   const row = document.querySelector(`tr[data-bid="${bid}"]`);
   const item = state.backlog.find(b => b.id === bid);
   if (!row || !item) return;
@@ -593,7 +657,7 @@ async function saveBacklogEntry(bid) {
   renderBacklogTotal();
 }
 
-async function addBacklogEntry() {
+async function localAddBacklogEntry() {
   const item = await api.createBacklog({ category: defaultCat(), name: '', planned: 0 });
   upsert(state.backlog, item);
   if (!backlogOpen) toggleBacklog();
@@ -622,3 +686,26 @@ async function moveBacklogEntry(bid) {
   renderSummary();
   flash('Перенесено в планируемые');
 }
+
+// Explicit view port: cloud installs implementations once during composition.
+const view = { renderSummary: localRenderSummary, renderMandatoryTotal: localRenderMandatoryTotal, renderMandatory: localRenderMandatory, renderTabs: localRenderTabs, plannedTotals: localPlannedTotals, remInfo: localRemInfo, renderPlannedTotals: localRenderPlannedTotals, renderPlanned: localRenderPlanned, patchPlannedRow: localPatchPlannedRow, saveEntry: localSaveEntry, addEntry: localAddEntry, renderBacklog: localRenderBacklog, saveBacklogEntry: localSaveBacklogEntry, addBacklogEntry: localAddBacklogEntry, entryToBacklog: localEntryToBacklog };
+function setView(implementation) { Object.assign(view, implementation); }
+function renderSummary(...args) { const result = view.renderSummary(...args); viewHooks.summary(); return result; }
+function renderMandatoryTotal(...args) { return view.renderMandatoryTotal(...args); }
+function renderMandatory(...args) { return view.renderMandatory(...args); }
+function renderTabs(...args) { return view.renderTabs(...args); }
+function plannedTotals(...args) { return view.plannedTotals(...args); }
+function remInfo(...args) { return view.remInfo(...args); }
+function renderPlannedTotals(...args) { return view.renderPlannedTotals(...args); }
+function renderPlanned(...args) { return view.renderPlanned(...args); }
+function patchPlannedRow(...args) { return view.patchPlannedRow(...args); }
+function saveEntry(...args) { return view.saveEntry(...args); }
+function addEntry(...args) { return view.addEntry(...args); }
+function renderBacklog(...args) { return view.renderBacklog(...args); }
+function saveBacklogEntry(...args) { return view.saveBacklogEntry(...args); }
+function addBacklogEntry(...args) { return view.addBacklogEntry(...args); }
+function entryToBacklog(...args) { return view.entryToBacklog(...args); }
+
+const inlineHandlers = { runSaveAction, shiftMonth, createCurrentMonth, saveMonthFields, filterCat, enterBlur, cellKeydown, onCatChange, deleteEntry, saveEntry, addEntry, toggleCalendar, calPickYear, pickPeriod, closeConfirm, execConfirm, toggleBacklog, onBacklogCatChange, saveBacklogEntry, addBacklogEntry, deleteBacklogEntry, entryToBacklog, moveBacklogEntry, setReserve };
+
+export { resetContext, isCalendarOpen, inlineHandlers, closeCalendar, showBacklog, reserveControl, refreshData, doLogout, localEntryToBacklog, state, cats, api, configureViewHooks, setCategories, configureCore, $, fmtAbs, esc, isMobile, num, fmtK, upsert, idArg, isEditing, enterBlur, flash, runSaveAction, loadAll, loadCurrentMonth, catById, catColor, defaultCat, renderAll, deleteEntry, renderCalendar, activeModal, openModal, closeModal, openConfirm, closeConfirm, renderBacklogTotal, setView, renderSummary, renderMandatoryTotal, renderMandatory, renderTabs, plannedTotals, remInfo, renderPlannedTotals, renderPlanned, patchPlannedRow, saveEntry, renderBacklog, saveBacklogEntry, entryToBacklog };

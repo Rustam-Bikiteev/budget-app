@@ -1,3 +1,4 @@
+const { runtimeSource } = require('./runtime-source.cjs');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
@@ -12,14 +13,14 @@ function setup(income = 1000) {
   };
   const context = vm.createContext({ document: { addEventListener() {}, getElementById: field } });
   for (const path of ['shared/core.js', 'app.js']) {
-    vm.runInContext(readFileSync(join(__dirname, '..', path), 'utf8'), context);
+    vm.runInContext(runtimeSource(path), context);
   }
   const run = code => vm.runInContext(code, context);
   run(`
     state.income = ${income}; state.saved = 200;
     state.entries = [
       {type:'mandatory',name:'Ипотека',planned:300,actual:300},
-      {type:'mandatory',name:'Непредвиденные',planned:100,actual:20},
+      {type:'mandatory',name:'Непредвиденные',is_reserve:true,planned:100,actual:20},
       {type:'planned',name:'Продукты',planned:150,actual:50},
       {type:'planned',name:'Транспорт',planned:50,actual:70},
     ];
@@ -38,7 +39,7 @@ test('budget sectors reconcile to income without including income as a sector', 
   const app = setup();
   const parts = app.parts('h-ring');
   assert.deepEqual(parts.map(p => [p.label, p.value]), [
-    ['Обязательные', 380], ['Отложено', 200], ['Запланировано', 220], ['Свободно', 200],
+    ['Обязательные', 380], ['Отложено', 200], ['Выделено на траты', 220], ['Свободно', 200],
   ]);
   assert.equal(parts.reduce((sum, p) => sum + p.value, 0), 1000);
   assert.match(app.fields['h-income'].textContent, /1\s*000/);
@@ -47,7 +48,7 @@ test('budget sectors reconcile to income without including income as a sector', 
 test('spending sectors count overspending once and retain unspent allocations', () => {
   const app = setup();
   assert.deepEqual(app.parts('h-spending-ring').map(p => [p.label, p.value]), [
-    ['Потрачено', 120], ['Осталось', 100],
+    ['Потрачено', 120], ['Осталось без перерасходов', 100],
   ]);
   assert.match(app.fields['h-left'].textContent, /100/);
 });
@@ -91,4 +92,31 @@ test('row bars show plan, fact and remaining in order, preserving overspent rows
   assert.deepEqual(widths('entryProgress({planned:100,actual:0})'), [50, 0, 0, 50]);
   assert.deepEqual(widths('entryProgress({planned:0,actual:50})'), [0, 0, 100, 0]);
   assert.deepEqual(widths('entryProgress({planned:0,actual:0})'), [0, 0, 0, 0]);
+});
+
+
+test('demo separates original plan, allocation with overspend and both remainders', () => {
+  const app = setup(165000);
+  app.run(`
+    state.saved = 34500;
+    state.entries = [
+      {type:'mandatory',name:'Ипотека',planned:28500,actual:28500},
+      {type:'mandatory',name:'Коммунальные услуги',planned:4500,actual:0},
+      {type:'mandatory',name:'Подписки',planned:1800,actual:1800},
+      {type:'mandatory',name:'Непредвиденные',is_reserve:true,planned:8000,actual:0},
+      {type:'planned',planned:18000,actual:12450},
+      {type:'planned',planned:6000,actual:2400},
+      {type:'planned',planned:12000,actual:4200},
+      {type:'planned',planned:3500,actual:4100},
+      {type:'planned',planned:7000,actual:0},
+    ];
+    renderSummary();
+  `);
+  const totals = JSON.parse(app.run('JSON.stringify(plannedTotals())'));
+  const summary = JSON.parse(app.run('JSON.stringify(calc())'));
+  assert.equal(totals.totPlan, 46500);
+  assert.equal(summary.allocated, 47100);
+  assert.equal(summary.allocated - summary.spent, 23950);
+  assert.equal(totals.totRem, 23350);
+  assert.equal(summary.allocated - totals.totPlan, 600);
 });

@@ -1,3 +1,7 @@
+import { showBacklog, state, cats, configureViewHooks, $, esc } from '../shared/core.js';
+import { sumBy, used, money, calc, chartShare, initPullToRefresh } from '../app.js';
+
+export function installLilacView() {
 /* Reference-led presentation. Storage, mutations and calculations remain native. */
 const lilacIcons={
   home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
@@ -32,7 +36,7 @@ $('cal-popup').prepend(lilacSprintNav);
 const lilacMain=document.querySelector('main');
 const lilacOverview=document.createElement('section');lilacOverview.className='lilac-only lilac-overview';
 lilacOverview.innerHTML=`
-  <div class="lilac-shortcuts"><button onclick="lilacRoute('payments')">Платежи</button><button onclick="lilacRoute('planned')">Траты</button><button onclick="lilacRoute('backlog')">Бэклог</button></div>
+  <div class="lilac-shortcuts"><button onclick="lilacRoute('payments')">Платежи</button><button onclick="lilacRoute('planned')">Траты</button><button onclick="lilacRoute('backlog')">Будущие покупки</button></div>
   <div class="lilac-balance lilac-notch">
     <span class="lilac-small">Свободно в спринте</span>
     <button class="lilac-round-link" aria-label="Распределение бюджета" onclick="lilacRoute('analytics')">${lilacSVG('arrow')}</button>
@@ -40,7 +44,7 @@ lilacOverview.innerHTML=`
     <div class="lilac-balance-foot"><span id="lilac-income"></span><span id="lilac-free-share"></span></div>
   </div>
   <details class="lilac-goal" id="lilac-budget-editor">
-    <summary><span>Отложить в спринте</span><span class="lilac-goal-badge" id="lilac-saved-share"></span><span class="lilac-saving-track"><i id="lilac-saving-fill"></i><b id="lilac-saved"></b><span id="lilac-income-goal"></span></span></summary>
+    <summary><span class="lilac-edit-label"><span>Изменить доход и накопления</span><i aria-hidden="true">⌄</i></span><span class="lilac-goal-badge" id="lilac-saved-share"></span><span class="lilac-saving-track"><i id="lilac-saving-fill"></i><b id="lilac-saved"></b><span id="lilac-income-goal"></span></span></summary>
   </details>
   <button class="lilac-asset lilac-mandatory lilac-notch" onclick="lilacRoute('payments')">
     <span class="lilac-asset-head"><i>${lilacSVG('wallet')}</i><span>Платежи <small id="lilac-mand-count"></small></span><span class="lilac-asset-arrow">${lilacSVG('arrow')}</span></span>
@@ -48,13 +52,14 @@ lilacOverview.innerHTML=`
   </button>
   <button class="lilac-asset lilac-expenses lilac-notch" onclick="lilacRoute('planned')">
     <span class="lilac-asset-head"><i>${lilacSVG('swap')}</i><span>Траты <small id="lilac-plan-count"></small></span><span class="lilac-asset-arrow">${lilacSVG('arrow')}</span></span>
-    <span class="lilac-asset-foot"><span><small>По плану</small><b id="lilac-allocated"></b></span><span><small>Потрачено</small><b id="lilac-spent"></b></span><span class="lilac-chip" id="lilac-spent-share"></span></span>
-  </button>`;
+    <span class="lilac-asset-foot"><span><small>Выделено на траты</small><b id="lilac-allocated"></b></span><span><small>Потрачено</small><b id="lilac-spent"></b></span><span class="lilac-chip" id="lilac-spent-share"></span></span>
+  </button>
+  <p class="budget-explanation"><span id="lilac-allocation-note"></span><br>Выделено = план + перерасходы. Остаток в таблице = план − факт и включает минус по перерасходам.</p>`;
 lilacMain.prepend(lilacOverview);
 // Move the actual editable inputs, including their original save handlers.
 $('lilac-budget-editor').append(document.querySelector('.budget-fields'));
 const lilacAnalytics=document.createElement('section');lilacAnalytics.className='lilac-only lilac-analytics';
-lilacAnalytics.innerHTML=`<div class="lilac-stat-pills" id="lilac-stat-pills"></div><div class="lilac-chart-tabs"><button data-chart="entries" onclick="lilacSetChart('entries')" aria-pressed="true">По тратам</button><button data-chart="categories" onclick="lilacSetChart('categories')" aria-pressed="false">По категориям</button></div><div class="lilac-bars" id="lilac-bars" role="group" aria-label="План и факт трат"></div><div class="lilac-chart-legend"><span><i></i>В плане</span><span><i></i>Перерасход</span><span><i></i>Осталось</span></div><div class="lilac-chart-total"><span>Осталось потратить</span><b id="lilac-left"></b></div>`;
+lilacAnalytics.innerHTML=`<div class="lilac-stat-pills" id="lilac-stat-pills"></div><div class="lilac-chart-tabs"><button data-chart="entries" onclick="lilacSetChart('entries')" aria-pressed="true">По тратам</button><button data-chart="categories" onclick="lilacSetChart('categories')" aria-pressed="false">По категориям</button></div><div class="lilac-bars" id="lilac-bars" role="group" aria-label="План и факт трат"></div><div class="lilac-chart-legend"><span><i></i>В плане</span><span><i></i>Перерасход</span><span><i></i>Осталось</span></div><div class="lilac-chart-total"><span>Осталось без перерасходов</span><b id="lilac-left"></b></div><p class="budget-explanation">Сумма положительных остатков по тратам. Перерасход уже учтён в выделенной сумме; в таблице он уменьшает итоговый остаток.</p>`;
 lilacMain.append(lilacAnalytics);
 const lilacAccount=document.createElement('section');lilacAccount.className='lilac-only lilac-account';
 lilacAccount.innerHTML='<div class="lilac-account-action" data-account-action="refresh"><span>Обновить данные</span></div><div class="lilac-account-action" data-account-action="logout"><span>Выйти из аккаунта</span></div>';
@@ -63,7 +68,7 @@ const lilacOriginalHeaderActions=document.querySelector('.header-actions');
 const lilacHeaderButtons=[...lilacOriginalHeaderActions.children];
 for(const row of lilacAccount.querySelectorAll('.lilac-account-action'))row.addEventListener('click',event=>{if(!event.target.closest('button'))row.querySelector('button')?.click();});
 const lilacNav=document.createElement('nav');lilacNav.className='lilac-only lilac-bottom-nav';lilacNav.setAttribute('aria-label','Разделы бюджета');
-lilacNav.innerHTML=[['home','home','Главная'],['payments','check','Платежи'],['planned','swap','Траты'],['backlog','grid','Бэклог'],['analytics','chart','Бюджет']].map(([route,icon,title])=>`<button data-page="${route}" title="${title}" aria-label="${title}" onclick="lilacRoute('${route}')">${lilacSVG(icon)}<span>${title}</span></button>`).join('');
+lilacNav.innerHTML=[['home','home','Главная'],['payments','check','Платежи'],['planned','swap','Траты'],['backlog','grid','Будущие покупки'],['analytics','chart','Аналитика']].map(([route,icon,title])=>`<button data-page="${route}" title="${title}" aria-label="${title}" onclick="lilacRoute('${route}')">${lilacSVG(icon)}<span>${title}</span></button>`).join('');
 $('app').append(lilacNav);
 document.querySelector('#budget-view>.section:nth-child(2)').dataset.lilacPanel='payments';
 document.querySelector('#budget-view>.section:nth-child(4)').dataset.lilacPanel='planned';
@@ -78,14 +83,14 @@ const lilacSpendingTitle=lilacSpendingSummary.textContent;
 function lilacRoute(page){
   if(!['home','payments','planned','analytics','backlog','account'].includes(page))page='home';
   lilacPage=page;document.documentElement.dataset.lilacPage=page;
-  const titles={home:'Бюджет',payments:'Платежи',planned:'Траты',analytics:'Аналитика',backlog:'Бэклог',account:'Аккаунт'};
+  const titles={home:'Бюджет',payments:'Платежи',planned:'Траты',analytics:'Аналитика',backlog:'Будущие покупки',account:'Аккаунт'};
   document.querySelector('.lilac-page-title').textContent=titles[page];
   document.querySelector('.lilac-profile').setAttribute('aria-label',page==='home'?'Аккаунт':'Главная');
   lilacNav.querySelectorAll('button').forEach(button=>{
     const active=button.dataset.page===page;
     button.setAttribute('aria-current',active?'page':'false');
   });
-  if(page==='backlog'&&!backlogOpen)toggleBacklog();
+  if(page==='backlog')showBacklog();
   window.scrollTo(0,0);
 }
 function lilacBack(){lilacRoute(lilacPage==='home'?'account':'home');}
@@ -126,6 +131,8 @@ function lilacRender(){
   set('lilac-mand-count',`${state.entries.filter(e=>e.type==='mandatory').length}`);
   set('lilac-plan-count',`${state.entries.filter(e=>e.type==='planned').length}`);
   set('lilac-left',money(k.allocated-k.spent));
+  const plan=sumBy(state.entries.filter(e=>e.type==='planned'),e=>e.planned);
+  set('lilac-allocation-note',`План трат ${money(plan)} + перерасход ${money(k.allocated-plan)} = выделено ${money(k.allocated)}.`);
   const circleTotal=sumBy([k.mand,state.saved,k.allocated,k.free],value=>Math.max(0,value));
   $('lilac-stat-pills').innerHTML=[['Доход',state.income],['Отложить',state.saved],['Платежи',k.mand],['Потрачено',k.spent]].map(([label,value])=>`<div><span>${label}<small class="lilac-stat-share">${chartShare(value,circleTotal)}</small></span><b>${money(value)}</b></div>`).join('');
   lilacRenderBars();
@@ -149,12 +156,12 @@ function lilacRenderBars(){
   document.querySelectorAll('[data-chart]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.chart===lilacChartMode)));
 }
 
-const lilacNativeSummary=renderSummary;
-renderSummary=function(){lilacNativeSummary();lilacRender();};
-const lilacNativeLoad=loadCurrentMonth;
-loadCurrentMonth=async function(){await lilacNativeLoad();lilacRender();};
-const lilacNativeModalBackground=updateModalBackground;
-updateModalBackground=function(){lilacNativeModalBackground();const active=!!activeModal();lilacTop.inert=active;lilacNav.inert=active;$('expense-fab').inert=active;};
+configureViewHooks({ summary: lilacRender, loaded: lilacRender, modal: active => {
+  lilacTop.inert=active; lilacNav.inert=active; $('expense-fab').inert=active;
+} });
 lilacRoute('home');
 lilacTheme(document.documentElement.dataset.theme);
 initPullToRefresh();
+
+return { lilacRoute, lilacBack, lilacTheme, lilacSetChart };
+}

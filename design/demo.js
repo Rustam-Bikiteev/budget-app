@@ -1,10 +1,17 @@
+import * as finance from '../shared/domain.mjs';
+import * as core from '../shared/core.js';
+import { closeCalendar, showBacklog, state, configureCore, $, flash, loadAll, loadCurrentMonth, renderAll, deleteEntry, closeConfirm, renderBacklog, entryToBacklog } from '../shared/core.js';
+import * as cloudView from '../app.js';
+import { openCover, closeCover, openQuick, closeQuick, renderWho, openPad, closePad } from '../app.js';
+import { installLilacView } from '../ui/lilac.js';
+import { registerInlineHandlers } from '../shared/inline-bridge.mjs';
 /* In-memory implementation of the existing storage contract. No production API. */
-cats = [
+const initialCategories = [
   {id:'me',name:'Рустам',color:'#95b3cb'},
+  {id:'shared',name:'Общие',default:true,color:'#98c4aa'},
   {id:'nastya',name:'Настя',color:'#c49bd0'},
-  {id:'shared',name:'Общие',color:'#98c4aa'},
 ];
-const demoPeriod = {year:state.year,month:state.month,half:state.half};
+const demoPeriod = finance.initialPeriod(new Date(), 'cloud');
 const demoCopy = value => structuredClone(value);
 let demoID=100;
 const demoMonths=[{id:1,...demoPeriod,income:165000,saved:34500,transferred:null}];
@@ -12,7 +19,7 @@ const demoEntries=[
   {id:11,month_id:1,type:'mandatory',category:'shared',name:'Ипотека',planned:28500,actual:28500},
   {id:12,month_id:1,type:'mandatory',category:'shared',name:'Коммунальные услуги',planned:4500,actual:0},
   {id:13,month_id:1,type:'mandatory',category:'me',name:'Подписки',planned:1800,actual:1800},
-  {id:14,month_id:1,type:'mandatory',category:'shared',name:'Непредвиденные',planned:8000,actual:0},
+  {id:14,month_id:1,type:'mandatory',category:'shared',name:'Непредвиденные',planned:8000,actual:0,is_reserve:true},
   {id:21,month_id:1,type:'planned',category:'shared',name:'Продукты',planned:18000,actual:12450},
   {id:22,month_id:1,type:'planned',category:'me',name:'Кафе и рестораны',planned:6000,actual:2400},
   {id:23,month_id:1,type:'planned',category:'nastya',name:'Личные покупки',planned:12000,actual:4200},
@@ -35,7 +42,7 @@ const api={
     if(demoMonths.some(row=>row.year===year&&row.month===month&&row.half===half))return {error:'exists'};
     const created=demoInsert(demoMonths,{year,month,half,income:0,saved:0,transferred:null});
     if(copyFromId)demoEntries.filter(row=>row.month_id===copyFromId).forEach(row=>{
-      demoInsert(demoEntries,{month_id:created.id,type:row.type,category:row.category,name:row.name,planned:row.planned,actual:0});
+      demoInsert(demoEntries,{month_id:created.id,type:row.type,category:row.category,name:row.name,planned:row.planned,actual:0,is_reserve:row.is_reserve});
     });
     return created;
   },
@@ -64,29 +71,28 @@ function doLogout(){$('app').classList.add('hidden');$('login-overlay').classLis
 async function doLogin(event){event.preventDefault();$('login-overlay').classList.add('hidden');$('app').classList.remove('hidden');await init();}
 
 // Only chart colors are remapped. Values and calculations use app.js unchanged.
-const demoRenderBudgetChart=renderBudgetChart;
-renderBudgetChart=function(ring,legend,parts,label){
-  if(document.documentElement.dataset.theme==='lilac')return demoRenderBudgetChart(ring,legend,parts,label);
+cloudView.setChartPalette((ring,parts)=>{
+  if(document.documentElement.dataset.theme==='lilac')return parts;
   const colors=ring==='h-ring'?['var(--chart-1)','var(--chart-2)','var(--chart-3)','var(--chart-4)']:['var(--chart-3)','var(--chart-2)'];
-  return demoRenderBudgetChart(ring,legend,parts.map((part,index)=>({...part,color:colors[index]})),label);
-};
+  return parts.map((part,index)=>({...part,color:colors[index]}));
+});
 function demoTheme(theme){
   if(!['coral','lime','lilac','pastel'].includes(theme))return;
   document.documentElement.dataset.theme=theme;
-  if(typeof lilacTheme==='function')lilacTheme(theme);
+  lilacHandlers.lilacTheme(theme);
   if(state.monthId){renderAll();renderBacklog();}
   if(!$('sheet-overlay').classList.contains('hidden'))renderWho();
 }
 function demoCloseScreens(){
   closeConfirm();closeQuick();closeCover();closePad();
-  calOpen=false;$('cal-popup').classList.add('hidden');
+  closeCalendar();
   $('login-overlay').classList.add('hidden');$('app').classList.remove('hidden');
 }
 async function demoScreen(screen){
   demoCloseScreens();
   if(!state.monthId&&!['empty','login'].includes(screen)){Object.assign(state,demoPeriod);await loadCurrentMonth();}
   if(document.documentElement.dataset.theme==='lilac'){
-    lilacRoute(['payments','planned','analytics','backlog'].includes(screen)?screen:'home');
+    lilacHandlers.lilacRoute(['payments','planned','analytics','backlog'].includes(screen)?screen:'home');
     if(['payments','planned','analytics'].includes(screen))return;
     if(screen==='parameters'){$('lilac-budget-editor').open=true;return;}
   }
@@ -120,7 +126,7 @@ async function demoScreen(screen){
   }
   if(screen==='calendar'){$('month-label').click();return;}
   if(screen==='backlog'){
-    if(!backlogOpen)toggleBacklog();
+    showBacklog();
     document.querySelector('.backlog-header').scrollIntoView({behavior:'smooth',block:'start'});return;
   }
   window.scrollTo({top:0,behavior:'smooth'});
@@ -130,6 +136,10 @@ window.addEventListener('message',event=>{
   if(event.data?.type==='theme')demoTheme(event.data.theme);
   if(event.data?.type==='screen')demoScreen(event.data.screen).catch(error=>flash(error.message,true));
 });
+configureCore({ storage: api, categories: initialCategories, reload: init, escape: cloudView.onEscape, refresh: refreshData, logout: doLogout, mode: 'cloud' });
+cloudView.installCloudView();
+const lilacHandlers = installLilacView();
+registerInlineHandlers({ ...core.inlineHandlers, ...cloudView.cloudInlineHandlers, ...lilacHandlers, state: core.state, api, refreshData, doLogout, doLogin });
 $('app').classList.remove('hidden');
 init().then(async()=>{
   const screen=new URLSearchParams(location.search).get('screen');

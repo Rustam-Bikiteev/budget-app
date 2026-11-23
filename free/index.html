@@ -46,15 +46,13 @@
 
 /* ── Buttons ── */
 .btn-secondary {
-  border-radius: 8px;
-  padding: 10px 20px; font-size: 14px; font-weight: 700;
-  cursor: pointer; font-family: inherit;
-  transition: background .12s, border-color .12s;
+  padding: 10px 20px;
   background: var(--surface); color: var(--text); border: 1.5px solid var(--border);
 }
 .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
 .btn-sm { padding: 6px 14px; font-size: 13px; }
 .btn-link {
+  min-height: var(--tap-size);
   background: none; border: none; padding: 0;
   color: var(--blue); font: inherit; font-size: 13px;
   cursor: pointer; text-decoration: underline; text-align: left;
@@ -63,10 +61,7 @@
 /* ── Settings ── */
 #settings-overlay { z-index: 450; }
 .settings-box {
-  background: var(--surface); border-radius: 14px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.18);
-  width: 100%; max-width: 480px;
-  max-height: calc(100vh - 32px); overflow-y: auto;
+  max-width: 480px;
 }
 .settings-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -77,7 +72,7 @@
 .settings-sec { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
 .settings-sec:last-child { border-bottom: none; }
 .settings-sec h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
-.hint { color: #475569; font-size: 13px; line-height: 1.5; }
+.hint { color: var(--muted); font-size: var(--text-small); line-height: 1.5; }
 .hint b { color: var(--text); }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -88,7 +83,7 @@
   padding: 7px 10px; font-size: 14px; font-family: inherit; font-weight: 700;
   color: var(--cat); background: var(--surface);
 }
-.cat-name:focus { outline: none; border-color: var(--cat); }
+.cat-name:focus { border-color: var(--cat); }
 .swatches { display: flex; gap: 4px; flex-wrap: wrap; max-width: 150px; }
 .swatch {
   width: 20px; height: 20px; border-radius: 50%;
@@ -98,7 +93,7 @@
 .swatch.on { border-color: var(--text); }
 
 @media (max-width: 640px) {
-  .icon-btn { width: 40px; height: 44px; }
+  .icon-btn { width: 40px; height: var(--tap-size); }
   .swatch { width: 32px; height: 32px; }
   .settings-sec .del-btn { position: static; width: 30px; height: 30px; }
   .cat-row { flex-wrap: wrap; }
@@ -108,6 +103,7 @@
 </head>
 <body class="free-app">
 
+<div id="save-status" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="sync-dot" role="status" aria-live="polite"></div>
 
 <header>
@@ -139,19 +135,19 @@
 
 <!-- Confirm modal -->
 <div id="confirm-overlay" class="modal-overlay hidden">
-  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-name" tabindex="-1">
+  <div class="confirm-box dialog-surface" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-name" tabindex="-1">
     <p class="confirm-title" id="confirm-title"></p>
     <p class="confirm-name" id="confirm-name"></p>
     <div class="confirm-btns">
       <button class="confirm-cancel" onclick="closeConfirm()">Отмена</button>
-      <button class="confirm-ok" id="confirm-ok" onclick="execConfirm()"></button>
+      <button class="confirm-ok" id="confirm-ok" onclick="runSaveAction(() => execConfirm())"></button>
     </div>
   </div>
 </div>
 
 <!-- Settings modal -->
 <div id="settings-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeSettings()">
-  <div class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1">
+  <div class="settings-box dialog-surface" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1">
     <div class="settings-head">
       <h2 id="settings-title">Настройки</h2>
       <button class="icon-btn" aria-label="Закрыть" onclick="closeSettings()">×</button>
@@ -177,7 +173,7 @@
     <section class="settings-sec">
       <h3>Категории</h3>
       <div id="cat-list" style="display:flex;flex-direction:column;gap:8px"></div>
-      <button class="add-btn" onclick="addCat()">+ Добавить категорию</button>
+      <button class="add-btn" onclick="runSaveAction(() => addCat())">+ Добавить категорию</button>
     </section>
 
     <section class="settings-sec">
@@ -202,16 +198,23 @@
   <section id="guide" class="banner info hidden" aria-labelledby="guide-title">
     <div class="banner-text">
       <h2 id="guide-title" tabindex="-1">Бюджет от выплаты до выплаты</h2>
-      <p>Выберите месяц и период 1 или 2, затем создайте бюджет. Введите полученное и отложенное, добавьте обязательные платежи и планируемые покупки. «Факт» заполняйте по мере трат.</p>
-      <p>В каждом месяце два периода. При открытии автоматически выбран период 1 в дни 10–24, период 2 в остальные дни текущего месяца. Это не деление на 1–15 и 16–конец. Другой период можно выбрать стрелками или в календаре.</p>
-      <p>Обязательные платежи вычитаются по указанной сумме сразу. «Можно тратить» = получено − обязательные − отложено. «Остаток» дополнительно учитывает фактические траты. Будущие покупки можно перенести в бэклог.</p>
-      <p>Данные остаются в этом браузере. На другом устройстве они сами не появятся. В настройках сохраните JSON-копию вне браузера; она нужна для переноса и восстановления. Файл не зашифрован.</p>
+      <ol class="guide-steps">
+        <li>Выберите период и нажмите «Создать бюджет».</li>
+        <li>Введите доход и накопления, добавьте платежи и покупки.</li>
+        <li>Заполняйте «Факт» по мере трат.</li>
+      </ol>
+      <p>Данные хранятся только в этом браузере. Сохраните JSON-копию в настройках вне браузера, чтобы их восстановить или перенести.</p>
+      <details><summary>Периоды, расчёты и резервная копия</summary>
+        <p>В каждом месяце два периода. При открытии выбран период 1 в дни 10–24, период 2 в остальные дни текущего месяца. Другой период можно выбрать стрелками или в календаре.</p>
+        <p>Обязательные платежи вычитаются сразу. «Можно тратить» = получено − обязательные − отложено. «Остаток» дополнительно учитывает фактические траты. Будущие покупки можно хранить отдельно и переносить в нужный период.</p>
+        <p>На другом устройстве данные сами не появятся. Очистка данных сайта удалит бюджет. JSON-копия нужна для восстановления и переноса; файл не зашифрован.</p>
+      </details>
       <details><summary>Установка и работа без сети</summary>
         <p>iPhone: откройте в Safari → «Поделиться» → «На экран Домой». Android: меню Chrome → «Добавить на главный экран» или «Установить приложение». Названия пунктов зависят от версии браузера.</p>
         <p>Один раз откройте приложение с интернетом, дождитесь загрузки и проверьте повторный запуск без сети. Установка не заменяет резервную копию. После смены домена или браузера понадобится восстановление из JSON.</p>
       </details>
     </div>
-    <button class="btn-secondary btn-sm" onclick="dismissGuide()">Понятно</button>
+    <button class="btn-secondary btn-sm" onclick="runSaveAction(() => dismissGuide())">Понятно</button>
   </section>
 
   <!-- Empty state -->
@@ -221,7 +224,7 @@
     <label class="copy-option" id="copy-option" style="display:none">
       <input type="checkbox" id="copy-cb"> Скопировать план из предыдущего периода
     </label>
-    <button class="btn-primary" onclick="createCurrentMonth()">Создать бюджет</button>
+    <button class="btn-primary" onclick="runSaveAction(() => createCurrentMonth())">Создать бюджет</button>
   </div>
 
   <!-- Budget view -->
@@ -264,12 +267,12 @@
         <div class="income-field">
           <label for="income-inp">Получено за период</label>
           <input type="number" inputmode="decimal" id="income-inp" placeholder="0 ₽"
-            onblur="saveMonthFields()" onkeydown="enterBlur(event)">
+            onblur="runSaveAction(() => saveMonthFields())" onkeydown="enterBlur(event)">
         </div>
         <div class="income-field">
           <label for="saved-inp">Отложено за период</label>
           <input type="number" inputmode="decimal" id="saved-inp" placeholder="0 ₽"
-            onblur="saveMonthFields()" onkeydown="enterBlur(event)">
+            onblur="runSaveAction(() => saveMonthFields())" onkeydown="enterBlur(event)">
         </div>
       </div>
     </div>
@@ -292,14 +295,14 @@
         <tbody id="mandatory-body"></tbody>
       </table>
       <div class="add-row">
-        <button class="add-btn" onclick="addEntry('mandatory')">+ Добавить платёж</button>
+        <button class="add-btn" onclick="runSaveAction(() => addEntry('mandatory'))">+ Добавить платёж</button>
       </div>
     </div>
 
     <!-- Backlog -->
     <div class="section">
       <div class="section-header backlog-header" role="button" tabindex="0" aria-expanded="false" aria-controls="backlog-content" onclick="toggleBacklog()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleBacklog();}">
-        <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Бэклог</h2>
+        <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Будущие покупки</h2>
         <span class="section-total" id="backlog-total"></span>
       </div>
       <div id="backlog-content" class="hidden">
@@ -316,7 +319,7 @@
           <tbody id="backlog-body"></tbody>
         </table>
         <div class="add-row">
-          <button class="add-btn" onclick="addBacklogEntry()">+ Добавить в бэклог</button>
+          <button class="add-btn" onclick="runSaveAction(() => addBacklogEntry())">+ Добавить в будущие покупки</button>
         </div>
       </div>
     </div>
@@ -344,15 +347,20 @@
         <tfoot id="planned-foot"></tfoot>
       </table>
       <div class="add-row">
-        <button class="add-btn" onclick="addEntry('planned')">+ Добавить трату</button>
+        <button class="add-btn" onclick="runSaveAction(() => addEntry('planned'))">+ Добавить трату</button>
       </div>
     </div>
 
   </div><!-- /budget-view -->
 </main>
 
-<script src="../shared/core.js"></script>
-<script>
+<script type="module">
+import * as core from '../shared/core.js';
+import { state, cats, api, setCategories, configureCore, $, esc, isEditing, enterBlur, flash, runSaveAction, loadAll, catById, renderAll, openModal, closeModal, openConfirm, renderTabs, renderBacklog } from '../shared/core.js';
+import { registerInlineHandlers } from '../shared/inline-bridge.mjs';
+import { createIndexedDBAdapter } from '../storage/indexeddb.mjs';
+import { normalizeEntry } from '../shared/domain.mjs';
+
 // Local-first версия: сервера нет, всё лежит в IndexedDB этого браузера.
 // Защита от потери — резервные копии (файл JSON, автосохранение в файл).
 
@@ -361,13 +369,13 @@ const DEFAULT_CATS = [
   { id: 'me',     name: 'Я',     color: '#3b82f6' },
   { id: 'shared', name: 'Общие', color: '#10b981' },
 ];
-const BACKUP_FORMAT = 1;
+const BACKUP_FORMAT = 2;
 const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
 const DAY = 24 * 60 * 60 * 1000;
 const STALE_BACKUP_MS = 3 * DAY;
 
-coreConfig.copyPrevByDefault = true;
-cats = DEFAULT_CATS;
+
+setCategories(DEFAULT_CATS);
 const meta = { lastBackupAt: 0, lastExportAt: 0, lastChangeAt: 0, hasPreImport: false };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -391,204 +399,12 @@ const isStandalone = matchMedia('(display-mode: standalone)').matches || navigat
 const fsSupported = 'showSaveFilePicker' in window;
 
 // ── IndexedDB ────────────────────────────────────────────────────────────────
-// Каждая операция из нескольких шагов (перенос в бэклог, копирование плана,
+// Каждая операция из нескольких шагов (перенос в будущие покупки, копирование плана,
 // восстановление копии) идёт одной транзакцией: либо всё, либо ничего.
 
-const DB_NAME = 'budget-free';
-const DB_VERSION = 1;
-let dbPromise = null;
-
-function openDB() {
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      const months = db.createObjectStore('months', { keyPath: 'id' });
-      months.createIndex('period', ['year', 'month', 'half'], { unique: true });
-      const entries = db.createObjectStore('entries', { keyPath: 'id' });
-      entries.createIndex('month_id', 'month_id');
-      db.createObjectStore('backlog', { keyPath: 'id' });
-      db.createObjectStore('meta', { keyPath: 'key' });
-    };
-    req.onsuccess = () => {
-      const db = req.result;
-      // новая версия приложения в другой вкладке обновляет схему
-      db.onversionchange = () => { db.close(); location.reload(); };
-      resolve(db);
-    };
-    req.onerror = () => { dbPromise = null; reject(req.error); };
-    req.onblocked = () => flash('Закрой другие вкладки с бюджетом', true);
-  });
-  return dbPromise;
-}
-
-// fn(stores, out, t): результат кладётся в out.value, промис резолвится
-// только после commit транзакции.
-async function tx(storeNames, mode, fn) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const names = [].concat(storeNames);
-    const t = db.transaction(names, mode);
-    const s = {};
-    names.forEach(n => { s[n] = t.objectStore(n); });
-    const out = {};
-    t.oncomplete = () => resolve(out.value);
-    t.onabort = () => reject(out.error || t.error || new Error('Операция отменена'));
-    try { fn(s, out, t); } catch (e) { out.error = e; t.abort(); }
-  });
-}
-
-function onReq(r, cb) { r.onsuccess = () => cb(r.result); }
-
-function fail(out, t, msg) { out.error = new Error(msg); t.abort(); }
-
-// Любая ошибка записи должна быть видна: молча потерянная правка хуже алерта.
-async function write(storeNames, fn) {
-  try {
-    const v = await tx(storeNames, 'readwrite', fn);
-    onDataChanged();
-    return v;
-  } catch (e) {
-    flash('Не сохранилось: ' + (e && e.message || e), true);
-    throw e;
-  }
-}
-
-const getMeta = key => tx('meta', 'readonly', (s, out) =>
-  onReq(s.meta.get(key), r => { out.value = r ? r.value : undefined; }));
-const setMeta = (key, value) => tx('meta', 'readwrite', s => { s.meta.put({ key, value }); });
-const delMeta = key => tx('meta', 'readwrite', s => { s.meta.delete(key); });
-
-function patchRow(store, id, patch) {
-  onReq(store.get(id), row => {
-    if (row) store.put({ ...row, ...patch, updated_at: Date.now() });
-  });
-}
-
-const catIndex = id => { const i = cats.findIndex(c => c.id === id); return i === -1 ? 999 : i; };
-const sortRows = rows => rows.sort((a, b) =>
-  (a.type || '').localeCompare(b.type || '')
-  || catIndex(a.category) - catIndex(b.category)
-  || (a.created_at || 0) - (b.created_at || 0));
-
-const api = {
-  listMonths: () => tx('months', 'readonly', (s, out) =>
-    onReq(s.months.getAll(), v => { out.value = v; })),
-
-  getMonth: id => tx(['months', 'entries'], 'readonly', (s, out) => {
-    out.value = {};
-    onReq(s.months.get(id), v => { out.value.month = v; });
-    onReq(s.entries.index('month_id').getAll(id), v => { out.value.entries = sortRows(v); });
-  }),
-
-  createMonth: async (year, month, half, copyFromId) => {
-    try {
-      const created = await tx(['months', 'entries'], 'readwrite', (s, out) => {
-        const now = Date.now();
-        const m = { id: uid(), year, month, half, income: 0, saved: 0, created_at: now, updated_at: now };
-        s.months.add(m);
-        out.value = m;
-        if (!copyFromId) return;
-        onReq(s.entries.index('month_id').getAll(copyFromId), src => {
-          src.forEach((e, i) => s.entries.add({
-            id: uid(), month_id: m.id, type: e.type, category: e.category,
-            name: e.name, planned: e.planned, actual: 0,
-            created_at: now + i, updated_at: now,
-          }));
-        });
-      });
-      onDataChanged();
-      return created;
-    } catch (e) {
-      // уникальный индекс по периоду: его уже создали в другой вкладке
-      if (e && e.name === 'ConstraintError') return { error: 'exists' };
-      flash('Не сохранилось: ' + (e && e.message || e), true);
-      throw e;
-    }
-  },
-
-  updateMonth: (id, patch) => write('months', s => patchRow(s.months, id, patch)),
-
-  createEntry: row => write('entries', (s, out) => {
-    const now = Date.now();
-    const e = { id: uid(), ...row, created_at: now, updated_at: now };
-    s.entries.add(e);
-    out.value = e;
-  }),
-  updateEntry: (id, patch) => write('entries', s => patchRow(s.entries, id, patch)),
-  deleteEntry: id => write('entries', s => { s.entries.delete(id); }),
-
-  listBacklog: () => tx('backlog', 'readonly', (s, out) =>
-    onReq(s.backlog.getAll(), v => { out.value = sortRows(v); })),
-  createBacklog: row => write('backlog', (s, out) => {
-    const now = Date.now();
-    const b = { id: uid(), ...row, created_at: now, updated_at: now };
-    s.backlog.add(b);
-    out.value = b;
-  }),
-  updateBacklog: (id, patch) => write('backlog', s => patchRow(s.backlog, id, patch)),
-  deleteBacklog: id => write('backlog', s => { s.backlog.delete(id); }),
-
-  entryToBacklog: eid => write(['entries', 'backlog'], (s, out, t) => {
-    onReq(s.entries.get(eid), e => {
-      if (!e) return fail(out, t, 'запись не найдена');
-      const now = Date.now();
-      const b = { id: uid(), category: e.category, name: e.name, planned: e.planned, created_at: now, updated_at: now };
-      s.backlog.add(b);
-      s.entries.delete(eid);
-      out.value = b;
-    });
-  }),
-
-  backlogToEntry: (bid, monthId) => write(['entries', 'backlog', 'months'], (s, out, t) => {
-    onReq(s.months.get(monthId), m => {
-      if (!m) return fail(out, t, 'период не найден');
-      onReq(s.backlog.get(bid), b => {
-        if (!b) return fail(out, t, 'запись не найдена');
-        const now = Date.now();
-        const e = {
-          id: uid(), month_id: monthId, type: 'planned', category: b.category,
-          name: b.name, planned: b.planned, actual: 0, created_at: now, updated_at: now,
-        };
-        s.entries.add(e);
-        s.backlog.delete(bid);
-        out.value = e;
-      });
-    });
-  }),
-
-  saveCategories: list => write('meta', s => { s.meta.put({ key: 'categories', value: list }); }),
-
-  // удаление категории: её записи переезжают в другую, всё одной транзакцией
-  deleteCategory: (catId, toId, list) => write(['entries', 'backlog', 'meta'], s => {
-    ['entries', 'backlog'].forEach(name => {
-      onReq(s[name].getAll(), rows => rows
-        .filter(r => r.category === catId)
-        .forEach(r => s[name].put({ ...r, category: toId, updated_at: Date.now() })));
-    });
-    s.meta.put({ key: 'categories', value: list });
-  }),
-
-  snapshot: () => tx(['months', 'entries', 'backlog', 'meta'], 'readonly', (s, out) => {
-    out.value = { app: 'budget', format: BACKUP_FORMAT, exportedAt: new Date().toISOString() };
-    onReq(s.meta.get('categories'), r => { out.value.categories = r ? r.value : DEFAULT_CATS; });
-    onReq(s.months.getAll(), v => { out.value.months = v; });
-    onReq(s.entries.getAll(), v => { out.value.entries = v; });
-    onReq(s.backlog.getAll(), v => { out.value.backlog = v; });
-  }),
-
-  // замена всех данных; прежнее состояние сохраняется для отката
-  restore: (data, previous) => write(['months', 'entries', 'backlog', 'meta'], s => {
-    s.months.clear(); s.entries.clear(); s.backlog.clear();
-    data.months.forEach(r => s.months.add(r));
-    data.entries.forEach(r => s.entries.add(r));
-    data.backlog.forEach(r => s.backlog.add(r));
-    s.meta.put({ key: 'categories', value: data.categories });
-    if (previous) s.meta.put({ key: 'preImport', value: previous });
-    else s.meta.delete('preImport');
-  }),
-};
+const storage = createIndexedDBAdapter({ indexedDB, uid, getCategories: () => cats, defaultCategories: DEFAULT_CATS,
+  onChanged: onDataChanged, onError: error => flash('Не сохранилось: ' + error.message, true), onVersionChange: () => location.reload() });
+const { getMeta, setMeta, delMeta, tx, openDB } = storage;
 
 // ── после каждой записи ──────────────────────────────────────────────────────
 
@@ -636,7 +452,7 @@ async function loadMeta() {
     getMeta('categories'), getMeta('lastBackupAt'), getMeta('lastChangeAt'), getMeta('preImport'),
     getMeta('lastExportAt'), getMeta('guideSeen'),
   ]);
-  cats = Array.isArray(c) && c.length ? c : DEFAULT_CATS;
+  setCategories(Array.isArray(c) && c.length ? c : DEFAULT_CATS);
   meta.lastBackupAt = lb || 0;
   meta.lastExportAt = le || 0;
   meta.lastChangeAt = lc || 0;
@@ -765,9 +581,10 @@ function normalizeBackup(raw) {
   const used = new Set();
   const entries = (raw.entries || []).map((e, i) => {
     if (e.type !== 'mandatory' && e.type !== 'planned') throw new Error('некорректный тип записи');
+    if ('is_reserve' in e && typeof e.is_reserve !== 'boolean') throw new Error('некорректный признак резерва');
     const r = {
       id: asId(e.id), month_id: asId(e.month_id),
-      type: e.type,
+      type: e.type, is_reserve: normalizeEntry(e).is_reserve,
       category: asId(e.category), name: String(e.name ?? '').slice(0, 200),
       planned: amount(e.planned), actual: amount(e.actual),
       created_at: e.created_at || now + i, updated_at: e.updated_at || now,
@@ -928,6 +745,7 @@ document.addEventListener('visibilitychange', () => {
 // ── banner ────────────────────────────────────────────────────────────────────
 
 let bannerDismissed = false;
+function dismissBanner() { bannerDismissed = true; renderBanner(); }
 
 function renderBanner() {
   const el = $('banner');
@@ -957,7 +775,7 @@ function renderBanner() {
       Если очистить данные браузера, записи пропадут без возможности восстановления.${iosHint}</div>
       <div class="banner-actions">
         <button class="btn-primary btn-sm" onclick="exportBackup()">Сохранить копию</button>
-        <button class="btn-secondary btn-sm" onclick="bannerDismissed = true; renderBanner()">Позже</button>
+        <button class="btn-secondary btn-sm" onclick="dismissBanner()">Позже</button>
       </div>`;
   }
 
@@ -1038,10 +856,10 @@ function renderCatEditor() {
   $('cat-list').innerHTML = cats.map(c => `
     <div class="cat-row" style="--cat:${c.color}">
       <input class="cat-name" aria-label="Название категории" value="${esc(c.name)}" maxlength="24" placeholder="Название"
-        onchange="renameCat('${c.id}', this.value)" onkeydown="enterBlur(event)">
+        onchange="runSaveAction(() => renameCat('${c.id}', this.value))" onkeydown="enterBlur(event)">
       <div class="swatches">${COLORS.map(col => `
         <button class="swatch ${col === c.color ? 'on' : ''}" style="background:${col}"
-          aria-label="Цвет" onclick="recolorCat('${c.id}','${col}')"></button>`).join('')}
+          aria-label="Цвет" onclick="runSaveAction(() => recolorCat('${c.id}','${col}'))"></button>`).join('')}
       </div>
       <button class="del-btn" title="Удалить категорию" onclick="removeCat('${c.id}')"
         ${cats.length < 2 ? 'disabled' : ''}>×</button>
@@ -1050,7 +868,7 @@ function renderCatEditor() {
 
 async function commitCats(list) {
   await api.saveCategories(list);
-  cats = list;
+  setCategories(list);
   afterCatsChange();
 }
 
@@ -1065,16 +883,16 @@ function afterCatsChange() {
 function renameCat(id, name) {
   name = name.trim().slice(0, 24);
   if (!name) { renderCatEditor(); return; }
-  commitCats(cats.map(c => c.id === id ? { ...c, name } : c));
+  return commitCats(cats.map(c => c.id === id ? { ...c, name } : c));
 }
 
 function recolorCat(id, color) {
-  commitCats(cats.map(c => c.id === id ? { ...c, color } : c));
+  return commitCats(cats.map(c => c.id === id ? { ...c, color } : c));
 }
 
 function addCat() {
   const color = COLORS.find(col => !cats.some(c => c.color === col)) || COLORS[0];
-  commitCats([...cats, { id: uid(), name: 'Новая', color }]).then(() => {
+  return commitCats([...cats, { id: uid(), name: 'Новая', color }]).then(() => {
     const inputs = document.querySelectorAll('#cat-list .cat-name');
     const last = inputs[inputs.length - 1];
     if (last) { last.focus(); last.select(); }
@@ -1092,12 +910,15 @@ function removeCat(id) {
     'Удалить',
     async () => {
       await api.deleteCategory(id, to.id, rest);
-      cats = rest;
+      setCategories(rest);
       await init();
       afterCatsChange();
     }
   );
 }
+
+configureCore({ storage, categories: cats, reload: init, escape: onEscape, mode: 'local' });
+registerInlineHandlers({ ...core.inlineHandlers, state: core.state, api: core.api, dismissBanner, openSettings, closeSettings, showGuide, dismissGuide, exportBackup, confirmExportSaved, pickImportFile, onImportFile, undoImport, chooseBackupFile, resumeBackupFile, disableBackupFile, renameCat, recolorCat, addCat, removeCat });
 
 // ── start ─────────────────────────────────────────────────────────────────────
 

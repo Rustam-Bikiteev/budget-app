@@ -2,6 +2,7 @@
 <html lang="ru" data-theme="lilac">
 <head>
 <meta charset="UTF-8">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Бюджет</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -11,8 +12,8 @@
 <meta name="apple-mobile-web-app-title" content="Бюджет">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
-<link rel="stylesheet" href="shared/core.css?v=4">
-<link rel="stylesheet" href="app.css?v=17">
+<link rel="stylesheet" href="shared/core.css?v=5">
+<link rel="stylesheet" href="app.css?v=18">
 <style>
 /* своё у версии с Supabase; общий интерфейс в shared/core.css */
 .logout-btn, .refresh-btn {
@@ -40,10 +41,8 @@
   padding: 20px;
 }
 .login-box {
-  background: var(--surface); border-radius: 14px;
-  box-shadow: var(--shadow);
   padding: 28px 24px;
-  width: 100%; max-width: 340px;
+  max-width: 340px;
   display: flex; flex-direction: column; gap: 14px;
 }
 .login-box h2 { font-size: 18px; font-weight: 700; text-align: center; }
@@ -52,11 +51,11 @@
   padding: 11px 12px; font-size: 16px; font-family: inherit;
   color: var(--text); background: var(--surface); width: 100%;
 }
-.login-box input:focus { outline: none; border-color: var(--blue); }
+.login-box input:focus { border-color: var(--focus-color); }
 .login-err { color: var(--red); font-size: 13px; text-align: center; min-height: 18px; }
 </style>
-<link rel="stylesheet" href="ui/base.css?v=1">
-<link rel="stylesheet" href="ui/lilac.css?v=7">
+<link rel="stylesheet" href="ui/base.css?v=2">
+<link rel="stylesheet" href="ui/lilac.css?v=8">
 </head>
 <body>
 
@@ -66,12 +65,14 @@
     <h2>Бюджет</h2>
     <input type="email" id="login-email" aria-label="Почта" placeholder="Почта" autocomplete="username" required>
     <input type="password" id="login-pass" aria-label="Пароль" placeholder="Пароль" autocomplete="current-password" required>
-    <p class="login-err" id="login-err"></p>
+    <p class="login-err" id="login-err" role="alert"></p>
     <button class="btn-primary" id="login-btn" type="submit">Войти</button>
+    <button type="button" onclick="doSignup(event)">Создать аккаунт</button>
   </form>
 </div>
 
-<div id="sync-dot"></div>
+<div id="save-status" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="sync-dot" role="status" aria-live="polite"></div>
 
 <div id="app" class="hidden">
 
@@ -103,19 +104,19 @@
 
 <!-- Confirm modal -->
 <div id="confirm-overlay" class="modal-overlay hidden">
-  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="confirm-box dialog-surface" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
     <p class="confirm-title" id="confirm-title"></p>
     <p class="confirm-name" id="confirm-name"></p>
     <div class="confirm-btns">
       <button class="confirm-cancel" onclick="closeConfirm()">Отмена</button>
-      <button class="confirm-ok" id="confirm-ok" onclick="execConfirm()"></button>
+      <button class="confirm-ok" id="confirm-ok" onclick="runSaveAction(() => execConfirm())"></button>
     </div>
   </div>
 </div>
 
 <!-- Цифровая панель для сумм (телефон) -->
 <div id="pad-overlay" class="modal-overlay pad-overlay hidden" onclick="if (event.target === this) closePad()">
-  <div class="pad" role="dialog" aria-modal="true" aria-labelledby="pad-title">
+  <div class="pad dialog-surface" role="dialog" aria-modal="true" aria-labelledby="pad-title">
     <div class="pad-head">
       <b id="pad-title"></b>
       <div class="pad-tabs" id="pad-tabs"></div>
@@ -141,14 +142,14 @@
       <button type="button" onclick="padKey('0')">0</button>
       <button type="button" onclick="padKey('000')">000</button>
       <button type="button" class="k-fn" onclick="padKey('clear')" aria-label="Очистить сумму">C</button>
-      <button type="button" class="k-ok" id="pad-ok" onclick="padDone()">Сохранить сумму</button>
+      <button type="button" class="k-ok" id="pad-ok" onclick="runSaveAction(() => padDone())">Сохранить сумму</button>
     </div>
   </div>
 </div>
 
 <!-- Новая трата -->
 <div id="sheet-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeQuick()">
-  <form class="sheet" role="dialog" aria-modal="true" aria-labelledby="quick-title" onsubmit="saveQuick(event)">
+  <form class="sheet dialog-surface" role="dialog" aria-modal="true" aria-labelledby="quick-title" onsubmit="event.preventDefault();runSaveAction(() => saveQuick(event))">
     <h3 id="quick-title">Новая трата</h3>
     <div class="quick-amounts">
       <div><label id="q-sum-label" for="q-sum">План, ₽</label><input id="q-sum" aria-label="Сумма расхода, ₽" inputmode="decimal" placeholder="0" autocomplete="off" oninput="updateQuickSource()"></div>
@@ -173,7 +174,7 @@
 
 <!-- Перерасход: покрыть из отложенных или непредвиденных -->
 <div id="cover-overlay" class="modal-overlay hidden" onclick="if (event.target === this) closeCover()">
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cover-title" aria-describedby="cover-text">
+  <div class="sheet dialog-surface" role="dialog" aria-modal="true" aria-labelledby="cover-title" aria-describedby="cover-text">
     <h3 id="cover-title"></h3>
     <p id="cover-text"></p>
     <div class="cover-opts" id="cover-opts"></div>
@@ -192,7 +193,7 @@
     <label class="copy-option" id="copy-option" style="display:none">
       <input type="checkbox" id="copy-cb"> Скопировать план из предыдущего спринта
     </label>
-    <button class="btn-primary" onclick="createCurrentMonth()">Создать бюджет</button>
+    <button class="btn-primary" onclick="runSaveAction(() => createCurrentMonth())">Создать бюджет</button>
   </div>
 
   <!-- Budget view -->
@@ -201,7 +202,7 @@
     <!-- Сводка бюджета -->
     <div class="section hero">
       <details class="budget-disclosure" id="budget-disclosure">
-        <summary>Бюджет</summary>
+        <summary>Распределение бюджета</summary>
         <div class="budget-income"><span>Общий доход</span><b id="h-income"></b></div>
         <div class="budget-chart">
           <div class="budget-donut">
@@ -213,14 +214,15 @@
           </div>
           <dl class="budget-legend" id="h-legend"></dl>
         </div>
+        <p class="budget-explanation">Выделено на траты = план + перерасходы. Остаток в таблице = план − факт, включая минус по перерасходам.</p>
       </details>
       <div class="budget-fields" role="group" aria-label="Параметры бюджета">
         <div class="budget-field"><label for="income-inp">Доход</label>
           <input class="edit-num" type="number" inputmode="decimal" id="income-inp" placeholder="0"
-            onblur="saveMonthFields()" onkeydown="enterBlur(event)"></div>
+            onblur="runSaveAction(() => saveMonthFields())" onkeydown="enterBlur(event)"></div>
         <div class="budget-field"><label for="saved-inp">Отложить</label>
           <input class="edit-num" type="number" inputmode="decimal" id="saved-inp" placeholder="0"
-            onblur="saveMonthFields()" onkeydown="enterBlur(event)"></div>
+            onblur="runSaveAction(() => saveMonthFields())" onkeydown="enterBlur(event)"></div>
         <div class="budget-field forecast"><span>Прогноз накоплений</span><b id="h-forecast"></b></div>
       </div>
     </div>
@@ -234,19 +236,19 @@
       <div class="thead r-mand"><div>Опл.</div><div></div><div>Название</div><div class="r">Сумма</div><div></div></div>
       <div id="mandatory-body"></div>
       <div class="add-row">
-        <button class="add-btn" onclick="addEntry('mandatory')">+ Добавить платёж</button>
+        <button class="add-btn" onclick="runSaveAction(() => addEntry('mandatory'))">+ Добавить платёж</button>
       </div>
     </div>
 
     <!-- Сводка трат -->
     <div class="section hero">
       <details class="budget-disclosure" id="spending-disclosure">
-        <summary>Траты по плану</summary>
+        <summary>Выделено на траты</summary>
         <div class="budget-chart">
           <div class="budget-donut">
             <div class="budget-ring" id="h-spending-ring" role="img" aria-label="Запланированные траты"></div>
             <div class="donut-center">
-              <div class="donut-label">Осталось</div>
+              <div class="donut-label">Без перерасходов</div>
               <div class="hero-val" id="h-left" aria-live="polite"></div>
             </div>
           </div>
@@ -261,6 +263,7 @@
         <h2>Траты спринта</h2>
         <span class="sub" id="planned-total"></span>
       </div>
+      <p class="budget-explanation">План задаёте вы. Остаток = план − факт; перерасход уменьшает итог. В сводке «Выделено на траты» перерасход добавлен к плану.</p>
       <div class="cat-tabs" id="cat-tabs"></div>
       <div class="expense-key" aria-label="Колонки трат"><span class="key-plan">План</span><span class="key-actual">Факт</span><span class="key-left">Осталось</span></div>
       <div class="thead r-plan"><div></div><div>Название</div><div class="r">План</div><div class="r">Факт</div><div class="r">Осталось</div><div></div><div></div></div>
@@ -271,24 +274,24 @@
         <p><code>1200+800</code> задаёт сумму, <code>+500</code> добавляет, <code>−300</code> вычитает.</p>
       </details>
       <div class="add-row split">
-        <button class="add-btn" onclick="addEntry('planned')">+ Запланировать</button>
+        <button class="add-btn" onclick="runSaveAction(() => addEntry('planned'))">+ Запланировать</button>
         <button class="add-btn quick" onclick="openQuick(true)">Потратил вне плана</button>
       </div>
     </div>
 
   </div><!-- /budget-view -->
 
-  <!-- Бэклог: общий для всех спринтов, виден и на пустом спринте -->
+  <!-- Будущие покупки: общий для всех спринтов, виден и на пустом спринте -->
   <div class="section">
     <div class="section-header backlog-header" onclick="toggleBacklog()">
-      <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Бэклог</h2>
+      <h2><span class="backlog-arrow" id="backlog-arrow">▸</span>Будущие покупки</h2>
       <span class="sub" id="backlog-total"></span>
     </div>
     <div id="backlog-content" class="hidden">
       <div class="thead r-back"><div></div><div>Название</div><div class="r">Сумма</div><div></div><div></div></div>
       <div id="backlog-body"></div>
       <div class="add-row">
-        <button class="add-btn" onclick="addBacklogEntry()">+ Добавить в бэклог</button>
+        <button class="add-btn" onclick="runSaveAction(() => addBacklogEntry())">+ Добавить в будущие покупки</button>
       </div>
     </div>
   </div>
@@ -300,266 +303,34 @@
 </div><!-- /app -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="shared/core.js?v=4"></script>
-<script src="app.js?v=16"></script>
-<script src="ui/lilac.js?v=6"></script>
-<script>
-// Версия с Supabase: общий бюджет с Настей, живая синхронизация между телефонами.
-// Общее с free/ — в shared/core.js, свой интерфейс поверх него — в app.js,
-// здесь только хранилище, вход и realtime.
-
-// ── Supabase ─────────────────────────────────────────────────────────────────
-// anon/publishable key публичен по замыслу — доступ режет RLS (см. supabase_setup.sql)
-const SUPABASE_URL = 'https://szegeqfiitlonzlpeohx.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_DW_bjZP12NIX2HJA8IVy2w__lffl5yi';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+<script type="module">
+import * as core from './shared/core.js';
+import { registerInlineHandlers } from './shared/inline-bridge.mjs';
+import * as cloudView from './app.js';
+import { installLilacView } from './ui/lilac.js';
+import { createSupabaseAdapter } from './storage/supabase.mjs';
+import { installFamily } from './ui/family.mjs';
+const sb = window.supabase.createClient('https://szegeqfiitlonzlpeohx.supabase.co', 'sb_publishable_DW_bjZP12NIX2HJA8IVy2w__lffl5yi', {
   auth: { persistSession: true, autoRefreshToken: true },
 });
-
-cats = [
-  { id: 'me',     name: 'Рустам', color: '#3b82f6' },
-  { id: 'nastya', name: 'Настя', color: '#ec4899' },
-  { id: 'shared', name: 'Общие', color: '#10b981' },
-];
-
-// ── API (Supabase PostgREST) ─────────────────────────────────────────────────
-
-// Любая ошибка запроса должна быть видна: молча потерянная правка хуже алерта.
-function unwrap({ data, error }) {
-  if (error) { flash('Ошибка: ' + error.message, true); throw error; }
-  return data;
-}
-
-const api = {
-  listMonths: () => sb.from('months').select('*')
-    .order('year', { ascending: false })
-    .order('month', { ascending: false })
-    .order('half', { ascending: false })
-    .then(unwrap),
-
-  getMonth: async id => {
-    const month = unwrap(await sb.from('months').select('*').eq('id', id).single());
-    const entries = unwrap(await sb.from('entries').select('*').eq('month_id', id)
-      .order('type').order('category').order('planned', { ascending: false }));
-    return { month, entries };
-  },
-
-  createMonth: async (year, month, half, copyFromId) => {
-    const res = await sb.from('months')
-      .insert({ year, month, half, income: 0, saved: 0 }).select().single();
-    if (res.error) {
-      if (res.error.code === '23505') return { error: 'exists' };
-      flash('Ошибка: ' + res.error.message, true);
-      throw res.error;
-    }
-    const created = res.data;
-    if (copyFromId) {
-      const src = unwrap(await sb.from('entries')
-        .select('type,category,name,planned').eq('month_id', copyFromId));
-      if (src.length) {
-        unwrap(await sb.from('entries').insert(
-          src.map(e => ({ ...e, month_id: created.id, actual: 0 }))
-        ));
-      }
-    }
-    return created;
-  },
-
-  updateMonth: (id, patch) => sb.from('months').update(patch).eq('id', id).then(unwrap),
-
-  createEntry: row => sb.from('entries').insert(row).select().single().then(unwrap),
-  updateEntry: (id, patch) => sb.from('entries').update(patch).eq('id', id).then(unwrap),
-  deleteEntry: id => sb.from('entries').delete().eq('id', id).then(unwrap),
-
-  entryToBacklog: async eid => {
-    const e = unwrap(await sb.from('entries').select('category,name,planned').eq('id', eid).single());
-    const item = unwrap(await sb.from('backlog').insert(e).select().single());
-    unwrap(await sb.from('entries').delete().eq('id', eid));
-    return item;
-  },
-
-  listBacklog: () => sb.from('backlog').select('*')
-    .order('category').order('planned', { ascending: false }).then(unwrap),
-  createBacklog: row => sb.from('backlog').insert(row).select().single().then(unwrap),
-  updateBacklog: (id, patch) => sb.from('backlog').update(patch).eq('id', id).then(unwrap),
-  deleteBacklog: id => sb.from('backlog').delete().eq('id', id).then(unwrap),
-
-  backlogToEntry: async (bid, monthId) => {
-    const b = unwrap(await sb.from('backlog').select('category,name,planned').eq('id', bid).single());
-    const entry = unwrap(await sb.from('entries')
-      .insert({ ...b, month_id: monthId, type: 'planned', actual: 0 }).select().single());
-    unwrap(await sb.from('backlog').delete().eq('id', bid));
-    return entry;
-  },
-};
-
-// ── auth ─────────────────────────────────────────────────────────────────────
-
-async function doLogin(e) {
-  e.preventDefault();
-  const btn = $('login-btn');
-  btn.disabled = true;
-  $('login-err').textContent = '';
-  const { error } = await sb.auth.signInWithPassword({
-    email: $('login-email').value.trim(),
-    password: $('login-pass').value,
-  });
-  btn.disabled = false;
-  if (error) {
-    $('login-err').textContent = error.message === 'Invalid login credentials'
-      ? 'Неверная почта или пароль' : error.message;
-    return;
-  }
-  $('login-pass').value = '';
-  showApp();
-}
-
-async function doLogout() {
-  await sb.removeAllChannels();
-  await sb.auth.signOut();
-  location.reload();
-}
-
-function showApp() {
-  $('login-overlay').classList.add('hidden');
-  $('app').classList.remove('hidden');
-  init();
-  subscribeRealtime();
-}
-
-function showLogin() {
-  $('app').classList.add('hidden');
-  $('login-overlay').classList.remove('hidden');
-  $('login-email').focus();
-}
-
-// ── init ─────────────────────────────────────────────────────────────────────
-
-function init() { return loadAll(); }
-
-// Перечитывание по кнопке: дешевле полной перезагрузки страницы и не гоняет
-// заново логин. Страховка на случай, если realtime что-то не довёз.
+const storage = createSupabaseAdapter({ client: sb, onError: error => core.flash(error.message, true) });
+let family;
 async function refreshData() {
-  const btn = $('refresh-btn');
-  if (btn.disabled) return;
-  btn.disabled = true;
-  btn.classList.add('spin');
-  try {
-    await init();
-    flash('Обновлено');
-  } finally {
-    btn.disabled = false;
-    btn.classList.remove('spin');
-  }
+  const button = core.$('refresh-btn');
+  if (button.disabled) return;
+  button.disabled = true;
+  try { await family.refresh(); core.flash('Обновлено'); }
+  finally { button.disabled = false; }
 }
-
-// ── realtime ─────────────────────────────────────────────────────────────────
-// Правки прилетают с другого телефона в живом режиме. Перерисовку откладываем,
-// пока курсор стоит в поле: иначе чужое событие снесёт недописанную строку.
-
-let rtChannel = null;
-let renderQueued = false;
-
-function queueRender() {
-  if (isEditing()) { renderQueued = true; return; }
-  renderQueued = false;
-  renderAll();
-  renderBacklog();
-}
-
-document.addEventListener('focusout', () => {
-  setTimeout(() => {
-    if (!renderQueued || isEditing()) return;
-    queueRender();
-  }, 150);
-});
-
-function onMonthsChange(payload) {
-  const row = payload.new && payload.new.id ? payload.new : null;
-  const oldId = payload.old && payload.old.id;
-
-  if (payload.eventType === 'DELETE') {
-    state.allMonths = state.allMonths.filter(m => m.id !== oldId);
-    if (calOpen) renderCalendar();
-    if (state.monthId === oldId) { state.monthId = null; loadCurrentMonth(); }
-    return;
-  }
-  if (!row) return;
-
-  const isNew = !state.allMonths.some(m => m.id === row.id);
-  upsert(state.allMonths, row);
-  if (calOpen) renderCalendar();
-
-  if (row.id === state.monthId) {
-    state.income = row.income;
-    state.saved  = row.saved;
-    const inc = $('income-inp'), sav = $('saved-inp');
-    if (document.activeElement !== inc) inc.value = row.income || '';
-    if (document.activeElement !== sav) sav.value = row.saved || '';
-    renderSummary();
-  } else if (isNew && state.monthId === null
-      && row.year === state.year && row.month === state.month && row.half === state.half) {
-    // период создали на другом устройстве, а мы смотрим на его пустой экран
-    loadCurrentMonth();
-  }
-}
-
-function onEntriesChange(payload) {
-  if (payload.eventType === 'DELETE') {
-    const oldId = payload.old && payload.old.id;
-    if (!state.entries.some(e => e.id === oldId)) return;
-    state.entries = state.entries.filter(e => e.id !== oldId);
-    queueRender();
-    return;
-  }
-  const row = payload.new;
-  if (!row || row.month_id !== state.monthId) return;
-  upsert(state.entries, row);
-  queueRender();
-}
-
-function onBacklogChange(payload) {
-  if (payload.eventType === 'DELETE') {
-    const oldId = payload.old && payload.old.id;
-    if (!state.backlog.some(b => b.id === oldId)) return;
-    state.backlog = state.backlog.filter(b => b.id !== oldId);
-  } else {
-    const row = payload.new;
-    if (!row) return;
-    upsert(state.backlog, row);
-  }
-  if (isEditing()) { renderQueued = true; return; }
-  renderBacklog();
-}
-
-function subscribeRealtime() {
-  if (rtChannel) return;
-  rtChannel = sb.channel('budget-sync')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'months'  }, onMonthsChange)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'entries' }, onEntriesChange)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'backlog' }, onBacklogChange)
-    .subscribe(status => {
-      // Обрыв не смертелен: остаётся перечитывание при возврате на вкладку.
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        flash('Живая синхронизация отключилась', true);
-      }
-    });
-}
-
-// Realtime мог пропустить события, пока вкладка спала — по возврату досинхрон.
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState !== 'visible') return;
-  if ($('app').classList.contains('hidden')) return;
-  if (isEditing()) return;
-  await init();
-});
-
-// ── start ─────────────────────────────────────────────────────────────────────
-
-(async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) showApp(); else showLogin();
-})();
+const doLogin = event => family.login(event);
+const doSignup = event => family.login(event, true);
+const doLogout = () => family.logout();
+core.configureCore({ storage, categories: [], reload: core.loadAll, escape: cloudView.onEscape, refresh: refreshData, logout: doLogout, mode: 'cloud' });
+cloudView.installCloudView();
+const lilacHandlers = installLilacView();
+family = installFamily({ client: sb, storage });
+registerInlineHandlers({ ...core.inlineHandlers, ...cloudView.cloudInlineHandlers, ...lilacHandlers, state: core.state, api: core.api, doLogin, doSignup, doLogout, refreshData });
+family.start();
 </script>
 </body>
 </html>

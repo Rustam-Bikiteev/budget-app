@@ -1,36 +1,10 @@
-// Свой интерфейс версии с Supabase поверх shared/core.js: круговая сводка,
-// оплата обязательных, траты строками с меню действий.
-//
-// Подключается после core.js и до скрипта index.html. Функции с теми же именами,
-// что в core.js (renderSummary, renderPlanned, saveEntry...), заменяют общие:
-// core вызывает их по имени. free/ подключает только core.js и этого не видит.
-//
-// Схема данных та же. «Оплачено» у обязательного платежа = actual >= planned
-// (поле actual у обязательных раньше не использовалось).
+import * as finance from './shared/domain.mjs';
+import { showBacklog, reserveControl, refreshData, doLogout, state, cats, api, $, fmtAbs, esc, isMobile, num, fmtK, upsert, idArg, isEditing, flash, catById, catColor, defaultCat, renderAll, activeModal, openModal, closeModal, openConfirm, renderBacklogTotal, setView, renderSummary, renderMandatoryTotal, renderMandatory, renderTabs, plannedTotals, remInfo, renderPlannedTotals, renderPlanned, patchPlannedRow, saveEntry, renderBacklog, saveBacklogEntry, localEntryToBacklog } from './shared/core.js';
 
-const CAT_ORDER   = ['me', 'shared', 'nastya'];
-
-coreConfig.copyPrevByDefault = true;
-
-// ── период = спринт от выплаты до выплаты ───────────────────────────────────
-// 1-я половина месяца M: 10–24 M. 2-я: 25 M – 9 следующего месяца.
-
+// Cloud view: explicit implementation of the shared controller view port.
 const MON_GEN = ['января','февраля','марта','апреля','мая','июня',
                  'июля','августа','сентября','октября','ноября','декабря'];
 const MON_SHORT = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-
-// С 1 по 9 число ещё идёт спринт, начавшийся 25-го прошлого месяца.
-// core ставит half = 2, но месяц текущий — сдвигаем на прошлый.
-if (new Date().getDate() < 10) {
-  state.month--;
-  if (state.month < 1) { state.month = 12; state.year--; }
-}
-
-function periodRange(y, m, h) {
-  return h === 1
-    ? { start: new Date(y, m - 1, 10), end: new Date(y, m - 1, 24) }
-    : { start: new Date(y, m - 1, 25), end: new Date(y, m, 9) };
-}
 
 function periodTitle(y, m, h) {
   const yr = y === new Date().getFullYear() ? '' : ' ' + y;
@@ -39,12 +13,7 @@ function periodTitle(y, m, h) {
 }
 
 // сколько дней спринта осталось, считая сегодня; null — спринт не текущий
-function daysLeft() {
-  const { start, end } = periodRange(state.year, state.month, state.half);
-  const now = new Date(); now.setHours(0, 0, 0, 0);
-  if (now < start || now > end) return null;
-  return Math.round((end - now) / 864e5) + 1;
-}
+function daysLeft() { return finance.periodDaysLeft(state, new Date()); }
 
 function periodSub() {
   const { start, end } = periodRange(state.year, state.month, state.half);
@@ -61,29 +30,15 @@ function setPeriodLabel() {
   if (!state.monthId) $('empty-title').textContent = `Спринт ${periodTitle(year, month, half)} не создан`;
 }
 
-const coreLoadCurrentMonth = loadCurrentMonth;
-loadCurrentMonth = async function () {
-  const p = coreLoadCurrentMonth();   // синхронная часть core уже написала свой ярлык
-  setPeriodLabel();
-  await p;
-  setPeriodLabel();
-};
-
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-const sumBy = (list, f) => list.reduce((s, x) => s + f(x), 0);
+const { sumBy, used, isReserve, reserveLeft, isPaid, periodRange } = finance;
 const money = n => (n < 0 ? '−' : '') + fmtAbs(Math.round(n));
-const used = e => Math.max(e.planned, e.actual);      // строка занимает большее из плана и факта
-// «Непредвиденные» среди обязательных — резерв, а не платёж: actual = сколько из него уже взяли
-// на перерасход. Взятое ушло в план траты, поэтому в обязательных считается только остаток.
-const isReserve = e => e.type === 'mandatory' && /непредвид/i.test(e.name);
-const reserveLeft = e => Math.max(0, e.planned - e.actual);
-const reserveRow = () => state.entries.find(isReserve) || null;
-const isPaid = e => !isReserve(e) && e.planned > 0 && e.actual >= e.planned;
+const reserveRow = () => state.entries.filter(isReserve).sort((a, b) => a.id - b.id)[0] || null;
 const curMonthRow = () => state.allMonths.find(m => m.id === state.monthId) || null;
 
 function catSort(list) {
-  return [...list].sort((a, b) => CAT_ORDER.indexOf(a.category) - CAT_ORDER.indexOf(b.category));
+  return finance.sortCategories(list, cats);
 }
 
 // «1200+800» — новая сумма; «+500» и «-300» в начале — к текущему значению. null — не разобрали.
@@ -97,14 +52,14 @@ function parseSum(str, cur) {
 }
 
 function catDot(cat, handler, name) {
-  return `<select class="cloud-category" style="--cat:${catColor(cat)}" title="${esc(catById(cat)?.name || 'Категория')}" aria-label="Категория: ${esc(name || 'Без названия')}" onchange="${handler}">
-    ${CAT_ORDER.map(catById).filter(Boolean).map(c => `<option value="${esc(c.id)}" ${c.id === cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+  return `<select class="cloud-category" style="--cat:${catColor(cat)}" title="${esc(catById(cat)?.name || 'Категория')}" aria-label="Категория: ${esc(name || 'Без названия')}" onchange="runSaveAction(() => ${handler})">
+    ${cats.map(c => `<option value="${esc(c.id)}" ${c.id === cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
   </select>`;
 }
 function rowActions(id, backlog, name, disabled = '') {
   const label = esc(name || 'Без названия');
-  return `<button type="button" class="mini-btn back" aria-label="${backlog ? 'В спринт' : 'В бэклог'}: ${label}" title="${backlog ? 'В спринт' : 'В бэклог'}"
-      onclick="${backlog ? 'moveBacklogEntry' : 'entryToBacklog'}(${id})" ${disabled}>${backlog ? '↑' : '↓'}</button>
+  return `<button type="button" class="mini-btn back" aria-label="${backlog ? 'В спринт' : 'В будущие покупки'}: ${label}" title="${backlog ? 'В спринт' : 'В будущие покупки'}"
+      onclick="runSaveAction(() => ${backlog ? 'moveBacklogEntry' : 'entryToBacklog'}(${id}))" ${disabled}>${backlog ? '↑' : '↓'}</button>
     <button type="button" class="mini-btn del" aria-label="Удалить: ${label}" title="Удалить"
       onclick="${backlog ? 'deleteBacklogEntry' : 'deleteEntry'}(${id})">×</button>`;
 }
@@ -120,19 +75,12 @@ function followCategoryRow(kind, id) {
 // ── расчёт ───────────────────────────────────────────────────────────────────
 
 function calc() {
-  const mandRows = state.entries.filter(e => e.type === 'mandatory');
-  const plan     = state.entries.filter(e => e.type === 'planned');
-  const mand     = sumBy(mandRows, e => isReserve(e) ? reserveLeft(e) : e.planned);
-  const mandPaid = sumBy(mandRows.filter(isPaid), e => e.planned);
-  const life     = state.income - mand - state.saved;
-  const allocated = sumBy(plan, used);
-  const spent    = sumBy(plan, e => e.actual);
-  return { mand, mandPaid, life, allocated, spent, free: life - allocated };
+  return finance.cloudSummary(state);
 }
 
 // ── круговая сводка ──────────────────────────────────────────────────────────
 
-function renderSummary() {
+function cloudRenderSummary() {
   const k = calc();
 
   $('h-income').textContent = money(state.income);
@@ -145,14 +93,14 @@ function renderSummary() {
   renderBudgetChart('h-ring', 'h-legend', [
     { label: 'Обязательные', value: k.mand, color: 'var(--viz-mandatory)' },
     { label: 'Отложено', value: state.saved, color: 'var(--viz-saved)' },
-    { label: 'Запланировано', value: k.allocated, color: 'var(--viz-plan)' },
+    { label: 'Выделено на траты', value: k.allocated, color: 'var(--viz-plan)' },
     { label: k.free < 0 ? 'Дефицит' : 'Свободно', value: k.free, color: k.free < 0 ? 'var(--viz-over)' : 'var(--viz-left)' },
   ], `Распределение бюджета${k.free < 0 ? `. Дефицит: ${money(-k.free)}` : ''}`);
 
   renderBudgetChart('h-spending-ring', 'h-spending-legend', [
     { label: 'Потрачено', value: k.spent, color: 'var(--viz-actual)' },
-    { label: 'Осталось', value: k.allocated - k.spent, color: 'var(--viz-left)' },
-  ], 'Запланированные траты');
+    { label: 'Осталось без перерасходов', value: k.allocated - k.spent, color: 'var(--viz-left)' },
+  ], 'Выделено на траты с учётом перерасхода');
 }
 
 function chartShare(value, total) {
@@ -160,7 +108,10 @@ function chartShare(value, total) {
   return percent.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + '%';
 }
 
+let chartPalette = (ringId, parts) => parts;
+function setChartPalette(map) { chartPalette = map; }
 function renderBudgetChart(ringId, legendId, parts, label) {
+  parts = chartPalette(ringId, parts);
   const total = sumBy(parts, p => Math.max(0, p.value));
   const showShares = ringId === 'h-ring';
   let angle = 0;
@@ -180,7 +131,7 @@ function renderBudgetChart(ringId, legendId, parts, label) {
 
 // ── обязательные ─────────────────────────────────────────────────────────────
 
-function renderMandatoryTotal() {
+function cloudRenderMandatoryTotal() {
   const rows = state.entries.filter(e => e.type === 'mandatory');
   const k = calc();
   $('mandatory-total').textContent = rows.length
@@ -188,7 +139,7 @@ function renderMandatoryTotal() {
   return rows;
 }
 
-function renderMandatory() {
+function cloudRenderMandatory() {
   const rows = catSort(renderMandatoryTotal());
   $('mandatory-body').innerHTML = rows.map(e => {
     const id = idArg(e.id);
@@ -196,15 +147,16 @@ function renderMandatory() {
     return `
     <div class="row-wrap">
       <div class="row r-mand ${isPaid(e) ? 'is-paid' : ''}" data-eid="${e.id}">
-        ${res ? '<div></div>' : `<label class="paid" title="Оплачено"><input aria-label="Оплачено: ${esc(e.name || 'Без названия')}" type="checkbox" ${isPaid(e) ? 'checked' : ''} onchange="setPaid(${id},this.checked)"></label>`}
+        ${res ? '<div></div>' : `<label class="paid" title="Оплачено"><input aria-label="Оплачено: ${esc(e.name || 'Без названия')}" type="checkbox" ${isPaid(e) ? 'checked' : ''} onchange="runSaveAction(() => setPaid(${id},this.checked))"></label>`}
         ${catDot(e.category, `cycleEntryCat(${id},this.value)`, e.name)}
         <div class="name-cell">
           <input class="ci" aria-label="Название: ${esc(e.name || 'Без названия')}" data-f="name" value="${esc(e.name)}" placeholder="Название"
-            onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
+            onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="enterBlur(event)">
+          ${reserveControl(e)}
           ${res ? `<span class="badge reserve" title="Резерв на перерасход">${e.actual ? 'осталось ' + money(reserveLeft(e)) : 'резерв'}</span>` : ''}
         </div>
         <input class="ci r" ${padAttrs()} aria-label="План: ${esc(e.name || 'Без названия')}" data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
-          onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
+          onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="enterBlur(event)">
         <button class="mini-btn del" aria-label="Удалить: ${esc(e.name || 'Без названия')}" onclick="deleteEntry(${id})">×</button>
       </div>
     </div>`;
@@ -225,23 +177,19 @@ async function setPaid(eid, paid) {
 
 // ── траты спринта ────────────────────────────────────────────────────────────
 
-function renderTabs() {
+function cloudRenderTabs() {
   const tabs = [{ id: 'all', name: 'Все', color: 'var(--text)' },
-    ...CAT_ORDER.map(catById).filter(Boolean)];
+    ...cats];
   $('cat-tabs').innerHTML = '<span class="lbl">Фильтр трат:</span>' + tabs.map(c => `
     <button class="cat-tab ${state.catFilter === c.id ? 'active' : ''}" style="--cat:${c.color}"
       onclick="filterCat('${c.id}')">${esc(c.name)}</button>`).join('');
 }
 
-function plannedTotals() {
-  const all = state.entries.filter(e => e.type === 'planned');
-  const filtered = catSort(state.catFilter === 'all' ? all : all.filter(e => e.category === state.catFilter));
-  const totPlan = sumBy(filtered, e => e.planned);
-  const totActual = sumBy(filtered, e => e.actual);
-  return { filtered, totPlan, totActual, totRem: totPlan - totActual };
+function cloudPlannedTotals() {
+  return finance.plannedTotalsFor(state.entries, state.catFilter, cats);
 }
 
-function remInfo(e) {
+function cloudRemInfo(e) {
   const rem = e.planned - e.actual;
   return {
     // у траты вне плана весь факт — перерасход: красным, чтобы можно было покрыть
@@ -268,9 +216,9 @@ function remainingText(e) {
   return `<span class="remaining-full">${r.text}</span><span class="remaining-short">${e.planned || e.actual ? fmtK(e.planned - e.actual) : '—'}</span>`;
 }
 
-function renderPlannedTotals() {
+function cloudRenderPlannedTotals() {
   const { filtered, totPlan, totActual, totRem } = plannedTotals();
-  $('planned-total').textContent = filtered.length ? `потрачено ${money(totActual)} из ${money(totPlan)}` : '';
+  $('planned-total').textContent = filtered.length ? `потрачено ${money(totActual)} · план ${money(totPlan)}` : '';
   const f = isMobile() ? fmtK : money;
   $('planned-foot').innerHTML = filtered.length > 1 ? `
     <div></div><div>Итого (${filtered.length})</div>
@@ -279,7 +227,7 @@ function renderPlannedTotals() {
   $('planned-foot').classList.toggle('hidden', filtered.length < 2);
 }
 
-function renderPlanned() {
+function cloudRenderPlanned() {
   const { filtered } = plannedTotals();
   $('planned-body').innerHTML = filtered.map(e => {
     const r = remInfo(e);
@@ -290,13 +238,13 @@ function renderPlanned() {
         ${catDot(e.category, `cycleEntryCat(${id},this.value)`, e.name)}
         <div class="name-cell">
           <input class="ci" aria-label="Название: ${esc(e.name || 'Без названия')}" data-f="name" value="${esc(e.name)}" placeholder="Название"
-            onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
+            onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="enterBlur(event)">
           <span class="badge ${offPlan(e) ? '' : 'hidden'}">вне плана</span>
         </div>
         <input class="ci r" ${padAttrs()} aria-label="План: ${esc(e.name || 'Без названия')}" data-f="planned" inputmode="decimal" value="${e.planned || ''}" placeholder="0"
-          onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
+          onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="enterBlur(event)">
         <input class="ci r" ${padAttrs()} aria-label="Факт: ${esc(e.name || 'Без названия')}" data-f="actual" inputmode="tel" value="${e.actual || ''}" placeholder="0"
-          onblur="saveEntry(${id})" onkeydown="enterBlur(event)">
+          onblur="runSaveAction(() => saveEntry(${id}))" onkeydown="enterBlur(event)">
         <button type="button" class="rem ${r.cls}" title="Осталось: ${r.text}" aria-label="Остаток: ${esc(e.name || 'Без названия')}. ${esc(r.text)}${e.actual > e.planned ? '. Покрыть перерасход' : ''}" ${e.actual > e.planned ? '' : 'disabled'} onclick="openCover(${id})">${remainingText(e)}</button>
         ${rowActions(id, false, e.name)}
       </div>
@@ -306,7 +254,7 @@ function renderPlanned() {
   renderPlannedTotals();
 }
 
-function patchPlannedRow(eid) {
+function cloudPatchPlannedRow(eid) {
   const e = state.entries.find(x => x.id === eid);
   const row = document.querySelector(`.row[data-eid="${eid}"]`);
   if (!e || !row) return;
@@ -322,7 +270,7 @@ function patchPlannedRow(eid) {
   renderPlannedTotals();
 }
 
-async function saveEntry(eid) {
+async function cloudSaveEntry(eid) {
   const row = document.querySelector(`.row[data-eid="${eid}"]`);
   const idx = state.entries.findIndex(e => e.id === eid);
   if (!row || idx === -1) return;
@@ -375,7 +323,7 @@ async function cycleEntryCat(eid, category) {
   flash('Категория: ' + catById(category).name);
 }
 
-async function addEntry(type) {
+async function cloudAddEntry(type) {
   if (!state.monthId) return;
   const cat = (state.catFilter !== 'all' && type === 'planned') ? state.catFilter : defaultCat();
   const entry = await api.createEntry({
@@ -387,14 +335,13 @@ async function addEntry(type) {
   if (input) input.focus();
 }
 
-// у бэклога нет факта: потраченное по строке при переносе пропадёт — спрашиваем
-const coreEntryToBacklog = entryToBacklog;
-entryToBacklog = function (eid) {
+// у будущих покупок нет факта: потраченное по строке при переносе пропадёт — спрашиваем
+function cloudEntryToBacklog(eid) {
   const e = state.entries.find(x => x.id === eid);
-  if (!e || !e.actual) return coreEntryToBacklog(eid);
-  openConfirm('Перенести в бэклог?',
-    `По «${e.name || 'строке'}» уже потрачено ${money(e.actual)}. В бэклоге факта нет, эта сумма пропадёт из спринта.`,
-    'Перенести', () => coreEntryToBacklog(eid));
+  if (!e || !e.actual) return localEntryToBacklog(eid);
+  openConfirm('Перенести в будущие покупки?',
+    `По «${e.name || 'строке'}» уже потрачено ${money(e.actual)}. В списке будущих покупок факта нет, эта сумма пропадёт из спринта.`,
+    'Перенести', () => localEntryToBacklog(eid));
 };
 
 // ── перерасход: покрыть из отложенных или непредвиденных ─────────────────────
@@ -427,7 +374,7 @@ function openCover(eid) {
     const amt = Math.min(over, s.avail);
     const sub = amt <= 0 ? s.empty
       : `${money(s.avail)} → ${money(s.avail - amt)}${amt < over ? ` · покроет только ${money(amt)}` : ''}`;
-    return `<button type="button" class="cover-opt" ${amt <= 0 ? 'disabled' : ''} onclick="coverFrom('${s.id}')">
+    return `<button type="button" class="cover-opt" ${amt <= 0 ? 'disabled' : ''} onclick="runSaveAction(() => coverFrom('${s.id}'))">
       <b>${s.title}</b><span>${sub}</span></button>`;
   }).join('');
   openModal($('cover-overlay'));
@@ -437,8 +384,14 @@ function closeCover() { closeModal($('cover-overlay')); coverId = null; }
 
 async function coverFrom(src) {
   const e = state.entries.find(x => x.id === coverId);
-  closeCover();
   if (!e) return;
+  if (api.coverOverrun) {
+    await api.coverOverrun({ month_id: state.monthId, id: e.id, source: src });
+    closeCover();
+    try { await refreshData(); } catch { flash('Записано. Не удалось перечитать данные. Обновите вручную.', true); }
+    return;
+  }
+  closeCover();
   const s = coverSources().find(x => x.id === src);
   const amt = Math.min(e.actual - e.planned, s.avail);
   if (amt <= 0) return;
@@ -466,10 +419,18 @@ async function coverFrom(src) {
 
 // ── потратил вне плана ───────────────────────────────────────────────────────
 
-let quickCat = 'shared';
+let quickCat = null;
 let quickMonthId = null;
 let quickSaving = false;
 let quickBlocked = false;
+let cloudContext = 0;
+function resetCloudContext() {
+  cloudContext++;
+  quickCat = quickMonthId = coverId = pad = null;
+  quickSaving = quickBlocked = false;
+  $('q-error').textContent = '';
+  for (const id of ['q-name', 'q-sum', 'q-actual']) $(id).value = '';
+}
 
 function quickSources() {
   return [{ id: 'free', title: 'Из свободных', avail: Math.max(0, calc().free) }, ...coverSources()];
@@ -493,7 +454,7 @@ function updateQuickSource() {
 function openQuick(outsidePlan = false) {
   if (!state.monthId || quickSaving) return;
   quickMonthId = state.monthId;
-  quickCat = state.catFilter !== 'all' ? state.catFilter : 'shared';
+  quickCat = state.catFilter !== 'all' ? state.catFilter : defaultCat();
   $('q-sum').value = '';
   $('q-actual').value = '';
   $('q-offplan').checked = outsidePlan;
@@ -562,10 +523,12 @@ function initPullToRefresh() {
   }, { passive: true });
 }
 
+function pickQuickCategory(category) { quickCat = category; renderWho(); }
+
 function renderWho() {
-  $('q-who').innerHTML = CAT_ORDER.map(catById).filter(Boolean).map(c => `
+  $('q-who').innerHTML = cats.map(c => `
     <button type="button" class="cat-tab ${quickCat === c.id ? 'active' : ''}" style="--cat:${c.color}"
-      onclick="quickCat='${c.id}';renderWho()">${esc(c.name)}</button>`).join('');
+      onclick="pickQuickCategory('${c.id}')">${esc(c.name)}</button>`).join('');
 }
 
 async function saveQuick(ev) {
@@ -585,6 +548,19 @@ async function saveQuick(ev) {
     && e.name.trim().toLowerCase() === name.toLowerCase());
   const category = quickCat;
   const patch = outsidePlan ? { planned: (ex ? used(ex) : 0) + v, actual: (ex ? ex.actual : 0) + v } : { planned: v, actual };
+  if (api.quickExpense) {
+    const context = cloudContext;
+    quickSaving = true; updateQuickSource();
+    try {
+      if (outsidePlan) await api.quickExpense({ month_id: monthId, source: source.id, amount: v, ...(ex ? { id: ex.id } : { category, name }) });
+      else await api.createEntry({ month_id: monthId, type: 'planned', category, name, planned: v, actual, is_reserve: false });
+      if (context !== cloudContext) return false;
+      quickSaving = false; closeQuick();
+      try { await refreshData(); } catch { flash('Записано. Не удалось перечитать данные. Обновите вручную.', true); }
+      return;
+    } catch (error) { if (context === cloudContext) $('q-error').textContent = error.message || 'Не удалось записать расход. Повторите попытку.'; return false; }
+    finally { if (context === cloudContext) { quickSaving = false; updateQuickSource(); } }
+  }
   const reserve = source.id === 'reserve' ? reserveRow() : null;
   const before = source.id === 'saved' ? state.saved : reserve ? reserve.actual : 0;
   const after = source.id === 'saved' ? before - v : before + v;
@@ -633,6 +609,7 @@ async function saveQuick(ev) {
     controls.forEach(el => { el.disabled = false; });
     updateQuickSource();
   }
+  if (!saved) return false;
   if (saved) {
     applySource();
     if (state.monthId === monthId) { upsert(state.entries, entry); renderAll(); }
@@ -648,9 +625,9 @@ function onEscape() {
   else if (active === $('cover-overlay')) closeCover();
 }
 
-// ── бэклог ───────────────────────────────────────────────────────────────────
+// ── будущие покупки ───────────────────────────────────────────────────────────────────
 
-function renderBacklog() {
+function cloudRenderBacklog() {
   renderBacklogTotal();
   $('backlog-body').innerHTML = catSort(state.backlog).map(b => {
     const id = idArg(b.id);
@@ -660,16 +637,16 @@ function renderBacklog() {
       <div class="row r-back" data-bid="${b.id}">
         ${catDot(b.category, `cycleBacklogCat(${id},this.value)`, b.name)}
         <input class="ci" aria-label="Название: ${esc(b.name || 'Без названия')}" data-f="name" value="${esc(b.name)}" placeholder="Название"
-          onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
+          onblur="runSaveAction(() => saveBacklogEntry(${id}))" onkeydown="enterBlur(event)">
         <input class="ci r" ${padAttrs()} aria-label="План: ${esc(b.name || 'Без названия')}" data-f="planned" inputmode="decimal" value="${b.planned || ''}" placeholder="0"
-          onblur="saveBacklogEntry(${id})" onkeydown="enterBlur(event)">
+          onblur="runSaveAction(() => saveBacklogEntry(${id}))" onkeydown="enterBlur(event)">
         ${rowActions(id, true, b.name, dis)}
       </div>
     </div>`;
   }).join('');
 }
 
-async function saveBacklogEntry(bid) {
+async function cloudSaveBacklogEntry(bid) {
   const row = document.querySelector(`.row[data-bid="${bid}"]`);
   const item = state.backlog.find(b => b.id === bid);
   if (!row || !item) return;
@@ -692,10 +669,10 @@ async function cycleBacklogCat(bid, category) {
   followCategoryRow('bid', bid);
 }
 
-async function addBacklogEntry() {
+async function cloudAddBacklogEntry() {
   const item = await api.createBacklog({ category: defaultCat(), name: '', planned: 0 });
   upsert(state.backlog, item);
-  if (!backlogOpen) toggleBacklog();
+  showBacklog();
   renderBacklog();
   const input = document.querySelector(`.row[data-bid="${item.id}"] [data-f=name]`);
   if (input) input.focus();
@@ -815,5 +792,10 @@ document.addEventListener('keydown', e => {
   if (!pad) return;
   if (/^\d$/.test(e.key) || e.key === '+' || e.key === '-') padKey(e.key);
   else if (e.key === 'Backspace') padKey('back');
-  else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); padDone(); }
+  else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); runSaveAction(() => padDone()); }
 });
+
+function installCloudView() { setView({ renderSummary: cloudRenderSummary, renderMandatoryTotal: cloudRenderMandatoryTotal, renderMandatory: cloudRenderMandatory, renderTabs: cloudRenderTabs, plannedTotals: cloudPlannedTotals, remInfo: cloudRemInfo, renderPlannedTotals: cloudRenderPlannedTotals, renderPlanned: cloudRenderPlanned, patchPlannedRow: cloudPatchPlannedRow, saveEntry: cloudSaveEntry, addEntry: cloudAddEntry, renderBacklog: cloudRenderBacklog, saveBacklogEntry: cloudSaveBacklogEntry, addBacklogEntry: cloudAddBacklogEntry, entryToBacklog: cloudEntryToBacklog, periodChanged: setPeriodLabel, contextChanged: resetCloudContext }); }
+const cloudInlineHandlers = { setPaid, cycleEntryCat, cycleBacklogCat, openCover, closeCover, coverFrom, openQuick, closeQuick, updateQuickSource, saveQuick, confirmLogout, openPad, closePad, padKey, padDone, padChip, pickQuickCategory };
+
+export { cloudInlineHandlers, setChartPalette, sumBy, used, installCloudView, money, calc, chartShare, openCover, closeCover, openQuick, closeQuick, initPullToRefresh, renderWho, onEscape, openPad, closePad };

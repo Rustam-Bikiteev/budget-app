@@ -14,6 +14,25 @@
   --amber: #92400e;
   --amber-light: #fffbeb;
   --red: #b91c1c;
+  --red-light: #fee2e2;
+  --primary-hover: #2563eb;
+  --danger-hover: #dc2626;
+  --range-bg: #f8fafc;
+  --focus-color: var(--blue);
+  --focus-width: 3px;
+  --on-action: #fff;
+  --disabled-opacity: .5;
+  --text-caption: .75rem;
+  --text-small: .875rem;
+  --text-body: 1rem;
+  --text-subheading: 1.25rem;
+  --text-heading: 1.5rem;
+  --control-radius: 8px;
+  --card-radius: 14px;
+  --dialog-radius: var(--card-radius);
+  --dialog-pad: 16px;
+  --dialog-shadow: 0 8px 32px rgba(0,0,0,.18);
+  --tap-size: 44px;
   --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,8 +40,57 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--text-body);
+  line-height: 1.5;
   min-height: 100vh;
+}
+
+button, input, select { font-family: inherit; }
+button { touch-action: manipulation; }
+button:disabled { cursor: default; opacity: var(--disabled-opacity); }
+input::placeholder { color: var(--muted); opacity: 1; }
+:focus-visible { outline: var(--focus-width) solid var(--focus-color); outline-offset: 2px; }
+:where(input, select):focus-visible { outline-offset: -2px; }
+:where(.ci, .cat-sel, .cat-name, .income-field input):focus-visible {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: -3px;
+}
+:where(input[inputmode=decimal], input[inputmode=numeric], input[type=number], .ci.r, .s-card-val, .rem-cell) {
+  font-variant-numeric: tabular-nums;
+}
+
+:where(.empty-state, .s-card, .section, .dialog-surface, .login-box) {
+  background: var(--surface);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+}
+:where(.dialog-surface, .login-box) {
+  border-radius: var(--dialog-radius);
+  box-shadow: var(--dialog-shadow);
+  width: 100%;
+  max-height: calc(100dvh - 2 * var(--dialog-pad));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+:where(.btn-primary, .btn-secondary, .confirm-cancel, .confirm-ok, .add-btn) {
+  min-height: var(--tap-size);
+  border-radius: var(--control-radius);
+  font-size: var(--text-small);
+  font-weight: 700;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: background-color .12s, border-color .12s, color .12s;
+}
+:where(.btn-primary, .confirm-ok) {
+  color: var(--on-action);
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.btn-primary, .btn-secondary, .confirm-cancel, .confirm-ok, .add-btn, #sync-dot) {
+    transition: none;
+  }
 }
 
 /* ── Header ── */
@@ -66,7 +134,25 @@ header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
   max-width: calc(100vw - 24px);
 }
 #sync-dot.show { opacity: .85; }
-#sync-dot.err { background: var(--red); }
+
+/* Write state stays visible separately from transient action messages. */
+#save-status {
+  position: fixed; z-index: 900; left: 50%; transform: translateX(-50%);
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  width: max-content; max-width: calc(100vw - 24px);
+  padding: 7px 12px; border-radius: 12px;
+  background: var(--text); color: var(--on-action);
+  font-size: var(--text-caption); line-height: 1.4; text-align: center;
+  overflow-wrap: anywhere; pointer-events: none;
+}
+#save-status:empty { display: none; }
+#save-status[data-state=saving] { background: var(--blue-light); color: var(--text); }
+#save-status[data-state=saved] { background: var(--green); }
+#save-status[data-state=error] { background: var(--red); }
+#sync-dot.err { background: var(--red); color: var(--on-action); }
+.free-app:has(#guide:not(.hidden)) #banner.info { display: none; }
+.guide-steps { padding-left: 22px; line-height: 1.6; }
+.budget-explanation { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 12px 18px; }
 
 /* ── Main ── */
 main {
@@ -79,14 +165,11 @@ main {
 
 /* ── Empty state ── */
 .empty-state {
-  background: var(--surface);
-  border-radius: 14px;
   padding: 56px 24px;
   text-align: center;
-  box-shadow: var(--shadow);
   display: flex; flex-direction: column; align-items: center; gap: 16px;
 }
-.empty-state h2 { font-size: 20px; font-weight: 700; }
+.empty-state h2 { font-size: var(--text-subheading); font-weight: 700; }
 .empty-state p { color: var(--muted); }
 .copy-option {
   display: flex; align-items: center; gap: 8px;
@@ -97,14 +180,11 @@ main {
 /* ── Summary cards ── */
 .summary {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
 }
 .s-card {
-  background: var(--surface);
-  border-radius: 10px;
   padding: 14px 16px;
-  box-shadow: var(--shadow);
 }
 .s-card-label {
   font-size: 10px;
@@ -115,7 +195,8 @@ main {
   margin-bottom: 6px;
 }
 .s-card-val {
-  font-size: 19px;
+  font-size: var(--text-subheading);
+  overflow-wrap: anywhere;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -.5px;
@@ -129,9 +210,7 @@ main {
 
 /* ── Section ── */
 .section {
-  background: var(--surface);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
+  min-width: 0;
   overflow: hidden;
 }
 .section-header {
@@ -162,9 +241,10 @@ main {
   margin-bottom: 6px;
 }
 .income-field input {
-  font-size: 24px;
+  font-size: var(--text-heading);
   font-weight: 800;
-  border: none; outline: none;
+  border: none;
+  min-height: var(--tap-size);
   width: 100%;
   color: var(--text);
   background: transparent;
@@ -175,7 +255,7 @@ main {
 
 /* ── Table ── */
 table { width: 100%; border-collapse: collapse; }
-thead tr { background: #f8fafc; }
+thead tr { background: var(--range-bg); }
 th {
   padding: 8px 12px;
   font-size: 10px;
@@ -203,7 +283,7 @@ tbody tr:hover td { background: #fafafa; }
   font-size: 14px; font-family: inherit; color: var(--text);
   padding: 13px 12px; width: 100%; display: block;
 }
-.ci:focus { outline: none; color: var(--blue); }
+.ci:focus { color: var(--blue); }
 .ci.r { text-align: right; }
 td.col-num { cursor: text; }
 .ci[type=number] { -moz-appearance: textfield; }
@@ -219,7 +299,6 @@ td.col-num { cursor: text; }
   color: var(--text);
   text-overflow: ellipsis;
 }
-.cat-sel:focus { outline: none; }
 .cat-sel option { color: var(--text); }
 
 /* remaining */
@@ -237,14 +316,14 @@ td.col-num { cursor: text; }
   border-radius: 4px; line-height: 30px; text-align: center;
   transition: color .12s, background .12s;
 }
-.del-btn:hover { color: var(--red); background: #fee2e2; }
+.del-btn:hover { color: var(--red); background: var(--red-light); }
 .del-btn:disabled { opacity: .3; cursor: default; }
 .del-btn:disabled:hover { color: var(--muted); background: none; }
 
 /* totals row */
 .totals-row td {
   padding: 9px 12px; font-weight: 700; font-size: 13px;
-  background: #f8fafc; border-top: 2px solid var(--border);
+  background: var(--range-bg); border-top: 2px solid var(--border);
 }
 .totals-row td.r { text-align: right; }
 
@@ -253,9 +332,7 @@ td.col-num { cursor: text; }
 .add-btn {
   width: 100%; padding: 7px 12px;
   background: none; border: 1.5px dashed var(--border);
-  border-radius: 8px; cursor: pointer;
-  color: var(--muted); font-size: 13px; font-family: inherit;
-  transition: all .12s;
+  color: var(--muted);
 }
 .add-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
 
@@ -277,15 +354,8 @@ td.col-num { cursor: text; }
 .cat-tab.active { background: var(--text); border-color: var(--cat); color: #fff; }
 
 /* buttons */
-.btn-primary {
-  background: var(--blue); color: #fff;
-  border: none; border-radius: 8px;
-  padding: 10px 20px; font-size: 14px; font-weight: 700;
-  cursor: pointer; font-family: inherit;
-  transition: background .12s;
-}
-.btn-primary:hover { background: #2563eb; }
-.btn-primary:disabled { background: var(--muted); cursor: default; }
+.btn-primary { background: var(--blue); padding: 10px 20px; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
 
 .hidden { display: none !important; }
 
@@ -328,7 +398,7 @@ td.col-num { cursor: text; }
 .cal-month { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; text-align: center; }
 .cal-month-name {
   font-size: 11px; font-weight: 700; padding: 4px 2px 2px;
-  color: var(--muted); background: #f8fafc;
+  color: var(--muted); background: var(--range-bg);
   border-bottom: 1px solid var(--border);
 }
 .cal-halves { display: flex; }
@@ -344,8 +414,6 @@ td.col-num { cursor: text; }
 .cal-half.is-current { background: var(--blue); color: #fff !important; }
 .cal-half.is-current:hover { background: #2563eb; }
 
-:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
-.ci:focus-visible, .cat-name:focus-visible { outline: 3px solid #1d4ed8; outline-offset: -3px; }
 #guide { scroll-margin-top: 80px; }
 #guide h2 { font-size: 18px; margin-bottom: 8px; }
 #guide p { margin: 8px 0; }
@@ -356,32 +424,27 @@ td.col-num { cursor: text; }
   position: fixed; inset: 0;
   background: rgba(0,0,0,.35);
   display: flex; align-items: center; justify-content: center;
-  padding: 16px;
+  padding: var(--dialog-pad);
 }
 #confirm-overlay { z-index: 500; }
 .confirm-box {
-  background: var(--surface); border-radius: 14px;
   padding: 24px 28px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.18);
-  width: 100%; max-width: 380px; text-align: center;
+  max-width: 380px; text-align: center;
 }
 .confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
 .confirm-name { color: var(--muted); font-size: 13px; margin-bottom: 20px; min-height: 18px; line-height: 1.45; }
-.confirm-btns { display: flex; gap: 10px; justify-content: center; }
+.confirm-btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 .confirm-cancel {
-  padding: 9px 22px; border-radius: 8px;
+  padding: 9px 22px;
   border: 1.5px solid var(--border);
-  background: none; cursor: pointer; font-size: 14px; font-family: inherit;
-  font-weight: 600; color: var(--text); transition: background .12s;
+  background: none; font-weight: 600; color: var(--text);
 }
 .confirm-cancel:hover { background: var(--bg); }
 .confirm-ok {
-  padding: 9px 22px; border-radius: 8px; border: none;
-  background: var(--red); color: #fff; cursor: pointer;
-  font-size: 14px; font-family: inherit; font-weight: 700;
-  transition: background .12s;
+  padding: 9px 22px;
+  background: var(--red);
 }
-.confirm-ok:hover { background: #dc2626; }
+.confirm-ok:hover:not(:disabled) { background: var(--danger-hover); }
 
 /* ── Backlog section ── */
 .backlog-header { cursor: pointer; user-select: none; }
@@ -415,7 +478,7 @@ td.col-num { cursor: text; }
   header h1 { display: none; }
   main, #budget-view { gap: 14px; }
   main { padding: 16px 10px 40px; }
-  .summary { grid-template-columns: repeat(2, 1fr); }
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .income-grid { grid-template-columns: 1fr; }
   .income-field { border-right: none; border-bottom: 1px solid var(--border); }
   .income-field:last-child { border-bottom: none; }
@@ -453,7 +516,7 @@ td.col-num { cursor: text; }
   .free-app #planned-body td:nth-child(3) { grid-column: 2; grid-row: 2; }
   .free-app #planned-body td:nth-child(4) { grid-column: 3; grid-row: 2; }
   .free-app #planned-body td:nth-child(5) { grid-column: 4; grid-row: 2; }
-  .free-app #planned-body .col-num::before { display: block; font-size: 10px; color: #475569; padding: 4px; }
+  .free-app #planned-body .col-num::before { display: block; font-size: var(--text-caption); color: var(--muted); padding: 4px; }
   .free-app #planned-body td:nth-child(3)::before { content: 'План'; }
   .free-app #planned-body td:nth-child(4)::before { content: 'Факт'; }
   .free-app #planned-body td:nth-child(5)::before { content: 'Осталось'; }
@@ -462,11 +525,10 @@ td.col-num { cursor: text; }
   .free-app #planned-foot tr { display: grid; grid-template-columns: 2fr repeat(3, 1fr); }
   .free-app #planned-foot td { display: block; width: auto; min-width: 0; }
   .free-app #planned-foot td:nth-child(n+5) { display: none; }
-  .free-app .ci { font-size: 16px; min-height: 44px; }
-  .free-app .nav-btn, .free-app .month-label-btn, .free-app .cal-year-btn { min-height: 44px; }
-  .free-app .cat-sel { width: 32px; height: 32px; }
+  .free-app .ci { font-size: var(--text-body); min-height: var(--tap-size); }
+  .free-app .nav-btn, .free-app .month-label-btn, .free-app .cal-year-btn { min-height: var(--tap-size); }
+  .free-app .cal-popup { position: fixed; top: 60px; width: min(350px, calc(100vw - 24px)); min-width: 0; }
+  .free-app .cat-sel { width: 40px; height: 40px; border: 8px solid transparent; background-clip: padding-box; }
+  .free-app #planned-body .move-btn, .free-app #planned-body .tobacklog-btn { width: 100%; height: var(--tap-size); }
+  .free-app .cal-half, .free-app .cat-tab { min-height: var(--tap-size); }
 }
-
-:where(button, select, input, summary, a):focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
-
-input::placeholder { color: var(--muted); opacity: 1; }

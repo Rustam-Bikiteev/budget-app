@@ -1,11 +1,10 @@
+const { runtimeSource } = require('./runtime-source.cjs');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
 const { test } = require('node:test');
 const vm = require('node:vm');
 
-const core = readFileSync(join(__dirname, '../shared/core.js'), 'utf8');
-const cloud = readFileSync(join(__dirname, '../app.js'), 'utf8');
+const core = runtimeSource('shared/core.js');
+const cloud = runtimeSource('app.js');
 
 function setup(overrides = {}) {
   const fields = {};
@@ -23,13 +22,14 @@ function setup(overrides = {}) {
   }]));
   const context = vm.createContext({ document: { addEventListener() {}, getElementById: field }, api });
   vm.runInContext(core, context);
+  vm.runInContext("cats = [{id:'me'},{id:'shared'}]; quickCatFixture = 'shared';", context);
   vm.runInContext(cloud, context);
   const run = code => vm.runInContext(code, context);
   run(`
-    state.monthId = quickMonthId = 1;
+    state.monthId = quickMonthId = 1; quickCat = quickCatFixture;
     state.income = 200; state.saved = 50;
     state.allMonths = [{ id: 1, saved: 50 }];
-    state.entries = [{ id: 2, type: 'mandatory', name: 'Непредвиденные', planned: 40, actual: 5 }];
+    state.entries = [{ id: 2, type: 'mandatory', name: 'Непредвиденные', is_reserve: true, planned: 40, actual: 5 }];
     renderAll = flash = closeModal = () => {};
   `);
   return {
@@ -192,4 +192,24 @@ test('double submit is ignored and navigation cannot put the expense into anothe
   assert.equal(app.calls[0].args[0].month_id, 1);
   assert.equal(app.state().entries.length, 0);
   assert.equal(app.state().saved, 100);
+});
+
+test('cloud pending quick expense cannot block or close the next family form', async () => {
+  const app = setup();
+  app.run('api.quickExpense = () => new Promise(resolve => { globalThis.finishCloud = resolve; }); refreshData = () => { throw Error("Old context refreshed"); };');
+  const pending = app.save();
+  assert.equal(app.run('quickSaving'), true);
+  app.run('resetCloudContext(); state.monthId = 2; quickMonthId = 2;');
+  app.fields['q-name'].value = 'Другая семья';
+  app.run('finishCloud({row:{},month:{}})');
+  await pending;
+  assert.equal(app.run('quickSaving'), false);
+  assert.equal(app.fields['q-name'].value, 'Другая семья');
+  assert.equal(app.fields['q-error'].textContent, '');
+});
+
+test('cloud reserve picker matches the SQL first reserve by id', () => {
+  const app = setup();
+  app.run("state.entries.push({id:1,type:'mandatory',is_reserve:true,planned:12,actual:0})");
+  assert.equal(app.run("quickSources().find(source => source.id === 'reserve').avail"), 12);
 });

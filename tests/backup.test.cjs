@@ -5,9 +5,10 @@ const { test } = require('node:test');
 const vm = require('node:vm');
 
 const html = readFileSync(join(__dirname, '../free/index.html'), 'utf8');
-const constants = html.slice(html.indexOf('const COLORS ='), html.indexOf('coreConfig.copyPrevByDefault'));
+const constants = html.slice(html.indexOf('const COLORS ='), html.indexOf('setCategories(DEFAULT_CATS)'));
 const validation = html.slice(html.indexOf('function asId('), html.indexOf('async function onImportFile'));
-const context = vm.createContext({ SAFE_ID: /^[A-Za-z0-9_-]{1,64}$/ });
+const { normalizeEntry } = require('../shared/domain.mjs');
+const context = vm.createContext({ normalizeEntry, SAFE_ID: /^[A-Za-z0-9_-]{1,64}$/ });
 vm.runInContext(constants + validation, context);
 const normalize = value => context.normalizeBackup(value);
 
@@ -36,6 +37,20 @@ test('legacy format without categories recovers referenced categories', () => {
   assert.equal(normalize(data).categories[0].id, 'me');
 });
 
+test('old backups migrate reserve once; format 2 preserves explicit true and false', () => {
+  const data = backup();
+  Object.assign(data.entries[0], { type: 'mandatory', name: 'Непредвиденные' });
+  const migrated = normalize(data);
+  assert.equal(migrated.entries[0].is_reserve, true);
+  data.format = 2;
+  data.entries[0].is_reserve = false;
+  assert.equal(normalize(data).entries[0].is_reserve, false);
+  Object.assign(data.entries[0], { name: 'Подушка', is_reserve: true });
+  assert.equal(normalize(data).entries[0].is_reserve, true);
+  data.entries[0].is_reserve = 'true';
+  assert.throws(() => normalize(data), /признак резерва/);
+});
+
 test('corrupted amounts, periods, references and structures are rejected', () => {
   const cases = [
     b => { b.months[0].income = '100oops'; },
@@ -48,7 +63,7 @@ test('corrupted amounts, periods, references and structures are rejected', () =>
     b => { b.entries = {}; },
     b => { b.categories = null; },
     b => { b.format = 0; },
-    b => { b.format = 2; },
+    b => { b.format = 3; },
     b => { b.entries[0].id = "bad'id"; },
   ];
   for (const mutate of cases) {

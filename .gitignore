@@ -16,3 +16,9 @@ __pycache__/
 *.pyo
 venv/
 .venv/
+
+# Development and verification artifacts
+node_modules/
+playwright-report/
+test-results/
+_site/

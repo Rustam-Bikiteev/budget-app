@@ -11,7 +11,7 @@ const root = path.resolve(__dirname, '..');
 const previousWorker = execFileSync('git', ['show', 'HEAD:free/sw.js'], { cwd: root });
 let upgraded = false;
 let slow = false;
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+const types = { '.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/javascript', '.css': 'text/css',
   '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
 http.createServer(async (req, res) => {
