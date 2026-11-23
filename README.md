@@ -149,16 +149,12 @@ npm run package:pages
 2. Пройдите приёмку из [чек-листа выпуска](docs/RELEASE_REVIEW.md#чек-лист-выпуска).
    Для рабочего перехода сделайте внешний backup и подтвердите его восстановление.
    Новая корневая страница и семейная SQL-схема выпускаются вместе в окно обслуживания.
-3. В Settings → Pages → Build and deployment переключите Source на **GitHub Actions**.
+3. В Settings → Pages → Build and deployment источником выбран **GitHub Actions**.
    Workflow `.github/workflows/pages.yml` публикует артефакт после успешных
    проверок при push в `master` либо ручном запуске для `master`.
    Pull request и push в `codex/budget-release` запускают проверки без публикации.
    `npm run package:pages` локально собирает
    `_site/` по списку публичных файлов из `tests/package-pages.cjs`.
-
-По последней проверке 23.11.2026 Pages использует `master:/` (`build_type: legacy`).
-В этом режиме GitHub публикует ветку независимо от нового workflow.
-Переключение Pages, изменение рабочей БД и публикация остаются отдельным выпуском.
 
 ## Восстановление
 
