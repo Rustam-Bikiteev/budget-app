@@ -196,7 +196,7 @@ API сохраняет Promise/rejection: UI-обёртка не заменяе�
 
 `installFamily` управляет Auth/email confirmation, выбором семьи и её категориями.
 Без membership показывается create/join, при нескольких семьях — выбор. Owner может
-менять имя/названия категорий и создавать одноразовую ссылку на сутки; member не видит
+менять имя семьи, добавлять, переименовывать и удалять категории, а также создавать одноразовую ссылку на сутки; member не видит
 эти действия. Invite хранится в fragment, сразу удаляется из адреса и сохраняется
 в sessionStorage до успешного join; вставленная ссылка разбирается как текст, без fetch
 и перехода на её домен. Нет email-рассылки приглашений, удаления семей/участников.
@@ -354,7 +354,14 @@ token возвращает одинаковый `invalid_invite`. Email ново
 | `backlog_to_entry` | `id,expected_revision` backlog, `month_id,expected_month_revision` назначения |
 | `quick_expense` | `month_id,expected_revision` месяца, `source:'free'/'saved'/'reserve',amount>0`; существующая planned-строка `id` либо `category,name?` новой |
 | `cover_overrun` | `month_id,expected_revision` месяца, `id` planned-строки, `source:'saved'/'reserve'` |
-| `update_settings` | `expected_revision` household, `name?,settings?`; только owner |
+| `update_settings` | `expected_revision` household, `name?,settings?`; только owner. После миграции 002 удаление категории переносит записи и бэклог внутри той же транзакции. |
+
+`002_category_removal.sql` применяется после семейной схемы и legacy-импорта,
+если он нужен. Смена набора категорий переносит записи по удалённым ID
+в первую оставшуюся категорию с `default:true` или в последнюю категорию.
+Перенос повышает ревизии строк. Новые и изменённые назначения категорий
+проверяются по актуальным настройкам семьи. При конфликте участник обновляет
+данные, чтобы получить новый список категорий.
 
 Если quick не получил id, сервер ищет planned-строку той же category и имени
 (trim + lower); при нескольких совпадениях берёт первую по id. Это выполняется

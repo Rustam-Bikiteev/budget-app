@@ -41,7 +41,7 @@
 | Обновление, pull refresh | `index.html`, `app.js` | `refreshData`, `initPullToRefresh` |
 | IndexedDB, схема, транзакции, вкладки | `storage/indexeddb.mjs`; `free/index.html` inline module | `createIndexedDBAdapter`, `DB_VERSION`, `openDB`, `tx`, `write`; `bc`, `init` |
 | Backup, JSON, импорт, автокопия | `storage/indexeddb.mjs`; `free/index.html` inline module | `snapshot`, `restore`, `exportBackup`, `normalizeBackup`, `onImportFile`, `undoImport`, `writeBackupFile`, `markBackedUp` |
-| Категории, настройки, справка | `/`: `ui/family.mjs:renderAccount`; `/free/`: `free/index.html` inline module; `shared/domain.mjs` | `sortCategories`, `renderSettings`, `showGuide`, `renderCatEditor`, `commitCats`, `removeCat` |
+| Категории, настройки, справка | `/`: `ui/family.mjs`, `supabase/migrations/002_category_removal.sql`; `/free/`: `free/index.html` inline module; `shared/domain.mjs` | `renderAccount`, `editCategories`, `move_removed_categories`, `require_current_category`, `sortCategories`, `renderSettings`, `showGuide`, `renderCatEditor`, `commitCats`, `removeCat` |
 | Экраны, навигация, «Лаванда» | `ui/lilac.js`, `ui/lilac.css`, `ui/base.css`, `app.css`, `index.html` | `lilacRoute`, `lilacRender`, `lilacTheme`; CSS по DOM |
 | Композиция / inline bridge | `shared/core.js`, `app.js`, `ui/lilac.js`, `shared/inline-bridge.mjs`; точки входа | `configureCore`, `setView`, `configureViewHooks`, `inlineHandlers`, `cloudInlineHandlers`, `registerInlineHandlers` |
 | Диалоги, фокус, подтверждение | `shared/core.js`, `ui/lilac.js`; HTML режима | `openModal`, `closeModal`, `updateModalBackground`, `openConfirm`, `execConfirm` |
@@ -68,7 +68,7 @@ Node.js 24.14.1; Playwright 1.65.1; test-only PostgreSQL WASM PGlite 0.6.0.
 |---|---|---|
 | Чистый domain / периоды / резерв / категории | `domain.test.cjs` | `shared/domain.mjs` |
 | Storage contract через PostgreSQL RPC, filters/revisions/retry/context, atomic quick/cover, безопасные ошибки | `storage.test.cjs` | `storage/supabase.mjs`, `storage-contract.mjs`, `supabase-fixture.cjs`, PGlite и auth/SQL fixtures |
-| PostgreSQL fresh/legacy, RLS семей, RPC, invite, revision/idempotency/rollback, quick matching/delete_month, сохранение чужих sequence ACL | `database.test.cjs`, `fixtures/budget-auth.sql`, `fixtures/budget-legacy.sql` | `supabase/migrations/001_households.sql`, `supabase/legacy/prepare.sql`, `supabase/legacy/import.sql`; настоящий SET ROLE, JWT claims fixture |
+| PostgreSQL fresh/legacy, RLS семей, RPC, invite, revision/idempotency/rollback, quick matching/delete_month, перенос удалённых категорий, сохранение чужих sequence ACL | `database.test.cjs`, `fixtures/budget-auth.sql`, `fixtures/budget-legacy.sql` | `supabase/migrations/001_households.sql`, `supabase/migrations/002_category_removal.sql`, `supabase/legacy/prepare.sql`, `supabase/legacy/import.sql`; настоящий SET ROLE, JWT claims fixture |
 | Backup validation | `backup.test.cjs` | `normalizeBackup` в `free/index.html` |
 | Export / autosave | `file-backup.test.cjs` | `free/index.html` |
 | Доход / накопления | `save-month-fields.test.cjs` | `shared/core.js` |

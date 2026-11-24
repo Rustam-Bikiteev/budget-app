@@ -302,7 +302,7 @@ import { registerInlineHandlers } from './shared/inline-bridge.mjs';
 import * as cloudView from './app.js?v=2';
 import { installLilacView } from './ui/lilac.js?v=2';
 import { createSupabaseAdapter } from './storage/supabase.mjs';
-import { installFamily } from './ui/family.mjs';
+import { installFamily } from './ui/family.mjs?v=2';
 const sb = window.supabase.createClient('https://szegeqfiitlonzlpeohx.supabase.co', 'sb_publishable_DW_bjZP12NIX2HJA8IVy2w__lffl5yi', {
   auth: { persistSession: true, autoRefreshToken: true },
 });

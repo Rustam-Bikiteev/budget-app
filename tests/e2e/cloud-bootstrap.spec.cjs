@@ -119,11 +119,37 @@ test('owner invite retry, household/category settings and mobile account use sco
     cloudTest.details[updated.id] = updated;
     cloudTest.replies.push({ name: 'budget_mutate', operation: 'update_settings', data: { row: updated, month: null } });
   }, updated);
-  await page.locator('#family-edit-name').fill('Наш дом'); await page.locator('[data-family-cat="0"]').fill('Дом');
+  await page.locator('#family-edit-name').fill('Наш дом'); await page.locator('[data-family-cat="general"]').fill('Дом');
   await page.getByRole('button', { name: 'Сохранить настройки семьи', exact: true }).click();
   await expect(page.locator('#family-account h2')).toHaveText('Наш дом');
   const mutation = await page.evaluate(() => cloudTest.fixture.calls.find(c => c.rpc === 'budget_mutate').args);
   expect(mutation.payload).toEqual({ expected_revision: 1, name: 'Наш дом', settings: updated.settings });
+  await expect(page.getByRole('button', { name: 'Удалить категорию' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Добавить категорию' }).click();
+  const addedInput = page.getByRole('textbox', { name: 'Название категории' }).last();
+  await addedInput.fill('Настя');
+  const addedId = await addedInput.getAttribute('data-family-cat');
+  const withCategory = { ...updated, revision: 3, settings: { categories: [
+    ...updated.settings.categories, { id: addedId, name: 'Настя', color: '#8b80c9' },
+  ] } };
+  await page.evaluate(updated => {
+    cloudTest.replies.push({ name: 'budget_mutate', operation: 'update_settings', data: { row: updated, month: null } });
+  }, withCategory);
+  await page.getByRole('button', { name: 'Сохранить настройки семьи', exact: true }).click();
+  await expect(page.locator('#save-status')).toHaveAttribute('data-state', 'saved');
+  await expect(page.locator(`[data-family-cat="${addedId}"]`)).toHaveValue('Настя');
+  await page.getByRole('button', { name: 'Удалить категорию' }).last().click();
+  await expect(page.locator('#family-category-note')).toContainText('«Дом»');
+  await page.evaluate(updated => {
+    cloudTest.replies.push({ name: 'budget_mutate', operation: 'update_settings', data: { row: updated, month: null } });
+  }, { ...updated, revision: 4 });
+  await page.getByRole('button', { name: 'Сохранить настройки семьи', exact: true }).click();
+  await expect(page.locator('#save-status')).toHaveAttribute('data-state', 'saved');
+  const writes = await page.evaluate(() => cloudTest.fixture.calls.filter(c => c.rpc === 'budget_mutate').map(c => c.args.payload));
+  expect(writes.slice(1)).toEqual([
+    { expected_revision: 2, name: 'Наш дом', settings: withCategory.settings },
+    { expected_revision: 3, name: 'Наш дом', settings: updated.settings },
+  ]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/cloud-account-mobile.png', fullPage: true });
 });

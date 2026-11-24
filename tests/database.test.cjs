@@ -6,6 +6,7 @@ const { randomUUID } = require('node:crypto');
 const { PGlite } = require('@electric-sql/pglite');
 const read = path => readFileSync(resolve(__dirname, '..', path), 'utf8');
 const migration = read('supabase/migrations/001_households.sql');
+const categoryMigration = read('supabase/migrations/002_category_removal.sql');
 const prepare = read('supabase/legacy/prepare.sql');
 const importer = read('supabase/legacy/import.sql');
 const users = [1,2,3,4].map(n => `00000000-0000-0000-0000-${String(n).padStart(12,'0')}`);
@@ -118,6 +119,35 @@ test('PostgreSQL: independent families, restricted RLS/privileges, sharing and i
     assert.equal((await rpc(db,users[2],'budget_household_details',[b.id])).settings.categories[0].id,'general');
     await assert.rejects(mutate(db,users[0],a.id,'update_settings',{expected_revision:1,name:'overwrite'}),/revision_conflict/);
   });
+});
+
+test('PostgreSQL: removing a category moves entries and backlog and rejects stale category IDs', async t => {
+  const db = await fixture(); t.after(() => db.close());
+  await db.exec(migration);
+  const owner = users[0];
+  const family = await createFamily(db, owner, 'Категории');
+  const general = { id: 'general', name: 'Общие', color: '#8b80c9', default: true };
+  const personal = { id: 'personal', name: 'Я', color: '#427c75' };
+  const other = { id: 'other', name: 'Другое', color: '#a25c77' };
+  await mutate(db, owner, family.id, 'update_settings', {
+    expected_revision: 1, settings: { categories: [general, personal, other] }
+  });
+  const period = (await mutate(db, owner, family.id, 'create_month', { year: 2026, month: 11, half: 1 })).row;
+  const entry = (await mutate(db, owner, family.id, 'create_entry', {
+    month_id: period.id, expected_revision: period.revision, type: 'planned', category: personal.id, planned: 100
+  })).row;
+  const backlog = (await mutate(db, owner, family.id, 'create_backlog', { category: personal.id, planned: 50 })).row;
+  await db.exec(categoryMigration);
+  await mutate(db, owner, family.id, 'update_settings', {
+    expected_revision: 2, settings: { categories: [general, other] }
+  });
+  for (const [table, row] of [['entries', entry], ['backlog', backlog]]) {
+    const [moved] = await as(db, owner, `SELECT category, revision, planned FROM ${table} WHERE id=$1`, [row.id]);
+    assert.equal(moved.category, general.id);
+    assert.equal(rev(moved), rev(row) + 1);
+    assert.equal(Number(moved.planned), Number(row.planned));
+  }
+  await assert.rejects(mutate(db, owner, family.id, 'create_backlog', { category: personal.id }), /revision_conflict/);
 });
 
 test('PostgreSQL: atomic copy, CRUD revisions, moves, financial sources and rollback',async t=>{

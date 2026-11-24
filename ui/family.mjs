@@ -1,9 +1,10 @@
-import { state, $, setCategories, loadAll, renderAll, renderBacklog, flash, esc, activeModal, closeModal, resetContext, runSaveAction } from '../shared/core.js';
+import { state, $, setCategories, loadAll, renderAll, renderBacklog, renderTabs, flash, esc, activeModal, closeModal, resetContext, runSaveAction } from '../shared/core.js';
 import { cloudErrorMessage } from '../storage/supabase.mjs';
 
 // Owns Auth, selected household and generation-scoped Realtime lifetime.
 export function installFamily({ client: sb, storage }) {
   let epoch = 0, user = null, selected = null, families = [], channel = null;
+  const newCategoryColors = ['#8b80c9', '#427c75', '#a25c77', '#5f75ac', '#9a663e'];
   const requests = new Map();
   const pendingKey = 'budget-invite';
   const fragment = new URLSearchParams(location.hash.slice(1));
@@ -93,7 +94,7 @@ export function installFamily({ client: sb, storage }) {
     }
     add('#income-inp', state.income, 'Доход'); add('#saved-inp', state.saved, 'Отложено');
     add('#family-edit-name', selected.name, 'Название семьи');
-    selected.settings.categories.forEach((cat, i) => add(`[data-family-cat="${i}"]`, cat.name, 'Категория'));
+    selected.settings.categories.forEach(cat => add(`[data-family-cat="${CSS.escape(cat.id)}"]`, cat.name, 'Категория'));
     return values;
   }
   function restoreDraft(values) {
@@ -137,7 +138,49 @@ export function installFamily({ client: sb, storage }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'backlog', filter: `household_id=eq.${id}` }, receive)
       .subscribe(status => { if (stamp === epoch && ['CHANNEL_ERROR','TIMED_OUT'].includes(status)) flash('Живая синхронизация отключилась. Обновите данные вручную.', true); });
   }
+  function editCategories(form) {
+    const rows = new Map();
+    const list = form.querySelector('#family-categories');
+    const add = form.querySelector('#family-add-category');
+    const note = form.querySelector('#family-category-note');
+    function updateControls() {
+      for (const button of list.querySelectorAll('[data-remove-category]')) button.disabled = rows.size < 2;
+      add.disabled = rows.size >= 100;
+      const categories = [...rows.values()].map(row => row.category);
+      const target = categories.find(cat => cat.default) || categories.at(-1);
+      const removed = selected.settings.categories.some(cat => !rows.has(cat.id));
+      note.textContent = removed ? `После сохранения записи удалённых категорий перейдут в «${rows.get(target.id).input.value.trim()}».` : '';
+    }
+    function append(category) {
+      const row = document.createElement('div');
+      row.innerHTML = `<label>Название категории<input required maxlength="100"></label>
+        <button type="button" data-remove-category>Удалить категорию</button>`;
+      const input = row.querySelector('input');
+      input.dataset.familyCat = category.id;
+      input.value = category.name;
+      input.oninput = () => { input.setCustomValidity(''); updateControls(); };
+      row.querySelector('button').onclick = () => {
+        rows.delete(category.id);
+        row.remove();
+        updateControls();
+      };
+      rows.set(category.id, { category, input, row });
+      list.append(row);
+      return input;
+    }
+    selected.settings.categories.forEach(append);
+    add.onclick = () => {
+      if (rows.size >= 100) return;
+      const color = newCategoryColors.find(value => ![...rows.values()].some(({ category }) => category.color === value)) || newCategoryColors[0];
+      append({ id: crypto.randomUUID(), name: '', color }).focus();
+      updateControls();
+    };
+    updateControls();
+    return { rows, append, updateControls };
+  }
+  let categoryEditor;
   function renderAccount() {
+    categoryEditor = null;
     account.innerHTML = `<h2>${esc(selected.name)}</h2><p>${selected.role === 'owner' ? 'Владелец' : 'Участник'}</p>
       <button id="family-switch" type="button">Выбрать семейный бюджет</button><div id="family-owner"></div><p id="account-error" role="alert"></p>`;
     $('family-switch').onclick = () => {
@@ -146,22 +189,41 @@ export function installFamily({ client: sb, storage }) {
     };
     if (selected.role !== 'owner') return;
     $('family-owner').innerHTML = `<form id="family-settings"><label>Название семьи<input id="family-edit-name" required maxlength="120" value="${esc(selected.name)}"></label>
-      ${selected.settings.categories.map((cat, i) => `<label>Категория<input data-family-cat="${i}" required value="${esc(cat.name)}"></label>`).join('')}
-      <button class="btn-primary">Сохранить настройки семьи</button></form><button id="family-invite" type="button">Создать приглашение</button>
+      <fieldset><legend>Категории</legend><div id="family-categories"></div>
+      <button id="family-add-category" type="button">Добавить категорию</button>
+      <p id="family-category-note" aria-live="polite"></p></fieldset>
+      <button class="btn-primary" type="submit">Сохранить настройки семьи</button></form><button id="family-invite" type="button">Создать приглашение</button>
       <label id="invite-result" class="hidden">Одноразовая ссылка, действует сутки. Скопируйте и передайте лично.<input id="invite-link" readonly aria-label="Ссылка приглашения"></label>`;
-    $('family-settings').onsubmit = event => {
+    const form = $('family-settings');
+    const editor = categoryEditor = editCategories(form);
+    form.onsubmit = event => {
       event.preventDefault();
-      const stamp = epoch, family = selected, button = event.currentTarget.querySelector('button');
+      const stamp = epoch, family = selected, button = form.querySelector('[type="submit"]');
       if (button.disabled) return;
-      button.disabled = true; $('account-error').textContent = '';
+      const rows = [...editor.rows.values()];
+      const blank = rows.find(({ input }) => !input.value.trim());
+      if (blank) {
+        blank.input.setCustomValidity('Введите название категории.');
+        blank.input.reportValidity();
+        return;
+      }
+      const categories = rows.map(({ category, input }) => ({ ...category, name: input.value.trim() }));
+      const removed = family.settings.categories.some(cat => !editor.rows.has(cat.id));
+      const name = $('family-edit-name').value.trim();
+      const controls = [...form.elements].filter(control => !control.disabled);
+      controls.forEach(control => { control.disabled = true; });
+      $('account-error').textContent = '';
       runSaveAction(async () => {
         try {
-          const categories = family.settings.categories.map((cat, i) => ({ ...cat, name: account.querySelector(`[data-family-cat="${i}"]`).value.trim() }));
-          const updated = await storage.updateSettings(family.revision, { name: $('family-edit-name').value.trim(), settings: { ...family.settings, categories } });
+          const updated = await storage.updateSettings(family.revision, { name, settings: { ...family.settings, categories } });
           if (stamp !== epoch) return false;
-          selected = { ...updated, role: family.role }; setCategories(categories); renderAccount(); renderAll(); renderBacklog();
+          selected = { ...updated, role: family.role };
+          setCategories(updated.settings.categories);
+          renderAccount();
+          if (removed) await loadAll();
+          else { renderTabs(); renderAll(); renderBacklog(); }
         } catch (error) { if (stamp === epoch) $('account-error').textContent = message(error); return false; }
-        finally { button.disabled = false; }
+        finally { controls.forEach(control => { control.disabled = false; }); }
       });
     };
     $('family-invite').onclick = () => runSaveAction(async () => {
@@ -226,10 +288,23 @@ export function installFamily({ client: sb, storage }) {
   return { login, logout, refresh: async () => {
     if (!selected) return;
     const stamp = epoch, draft = captureDraft();
+    const added = categoryEditor ? [...categoryEditor.rows.values()]
+      .filter(({ category }) => !selected.settings.categories.some(cat => cat.id === category.id))
+      .map(({ category, input }) => ({ ...category, name: input.value })) : [];
+    const removed = categoryEditor ? selected.settings.categories.filter(cat => !categoryEditor.rows.has(cat.id)) : [];
     const details = await rpc('budget_household_details', { household_id: selected.id });
     selected = { ...details, role: selected.role }; setCategories(details.settings.categories);
     await loadAll(); if (stamp !== epoch) return;
-    renderAccount(); restoreDraft(draft);
+    renderAccount();
+    if (categoryEditor) {
+      for (const cat of added) if (categoryEditor.rows.size < 100 && !categoryEditor.rows.has(cat.id)) categoryEditor.append(cat);
+      for (const cat of removed) if (categoryEditor.rows.size > 1) {
+        categoryEditor.rows.get(cat.id)?.row.remove();
+        categoryEditor.rows.delete(cat.id);
+      }
+    }
+    restoreDraft(draft);
+    categoryEditor?.updateControls();
   }, start: async () => {
     const event = authEvents;
     const { data, error } = await sb.auth.getSession();
