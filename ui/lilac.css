@@ -249,7 +249,10 @@
 [data-theme=lilac] .lilac-bottom-nav button:focus-visible{outline-offset:-3px}
 
 @media(max-width:700px){
+ [data-theme=lilac]{--lilac-nav-bottom:clamp(8px,env(safe-area-inset-bottom),34px)}
  [data-theme=lilac] body{padding:0;background:#fcfcfc}
+ [data-theme=lilac] .lilac-bottom-nav{bottom:var(--lilac-nav-bottom)}
+ [data-theme=lilac] .expense-fab{bottom:calc(var(--lilac-nav-bottom) + 90px)}
  [data-theme=lilac] #app{width:100%;min-height:100dvh;border-radius:0;padding:24px 17px calc(180px + env(safe-area-inset-bottom))}
  [data-theme=lilac] .pad-overlay{padding:12px 12px calc(12px + env(safe-area-inset-bottom));align-items:flex-end}
  [data-theme=lilac] .pad{max-height:calc(100dvh - 24px - env(safe-area-inset-bottom))}

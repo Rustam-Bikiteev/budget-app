@@ -153,6 +153,11 @@ test('cloud: clear plan labels, discoverable editor and failed entry save can re
   await page.screenshot({ path: testInfo.outputPath('cloud-analytics-mobile.png'), fullPage: true });
   await page.locator('.lilac-bottom-nav').getByRole('button', { name: 'Траты', exact: true }).click();
   const actual = page.locator('#planned-body [data-f=actual]').first();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await expect(page.locator('.lilac-bottom-nav')).toHaveCSS('bottom', '8px');
+  await expect(page.locator('#expense-fab')).toHaveCSS('bottom', '98px');
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expect(actual).toHaveCSS('min-height', '44px');
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 760 });

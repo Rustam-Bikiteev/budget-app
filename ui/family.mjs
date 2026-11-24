@@ -14,7 +14,7 @@ export function installFamily({ client: sb, storage }) {
   const panel = document.createElement('section');
   panel.id = 'family-onboarding'; panel.className = 'login-overlay hidden';
   panel.innerHTML = `<div class="login-box"><h2>Семейный бюджет</h2><div id="family-choices"></div>
-    <form id="family-create"><label>Название семьи<input id="family-name" required maxlength="120" placeholder="Наш бюджет"></label><button class="btn-primary">Создать семейный бюджет</button></form>
+    <form id="family-create"><p>Можно вести бюджет одному и пригласить близких позже.</p><label>Название бюджета<input id="family-name" required maxlength="120" placeholder="Мой бюджет"></label><button class="btn-primary">Создать семейный бюджет</button></form>
     <form id="family-join"><label>Приглашение<input id="family-token" required autocomplete="off" placeholder="Ссылка или код приглашения"></label><button class="btn-primary">Присоединиться по приглашению</button></form>
     <p id="family-error" role="alert"></p><button id="family-logout" type="button">Выйти</button></div>`;
   document.body.append(panel);
