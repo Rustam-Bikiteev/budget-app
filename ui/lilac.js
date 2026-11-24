@@ -1,5 +1,5 @@
 import { showBacklog, state, cats, configureViewHooks, $, esc } from '../shared/core.js';
-import { sumBy, used, money, calc, chartShare, initPullToRefresh } from '../app.js';
+import { sumBy, used, money, calc, chartShare, initPullToRefresh } from '../app.js?v=2';
 
 export function installLilacView() {
 /* Reference-led presentation. Storage, mutations and calculations remain native. */

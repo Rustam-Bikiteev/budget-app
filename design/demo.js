@@ -1,9 +1,9 @@
 import * as finance from '../shared/domain.mjs';
 import * as core from '../shared/core.js';
 import { closeCalendar, showBacklog, state, configureCore, $, flash, loadAll, loadCurrentMonth, renderAll, deleteEntry, closeConfirm, renderBacklog, entryToBacklog } from '../shared/core.js';
-import * as cloudView from '../app.js';
-import { openCover, closeCover, openQuick, closeQuick, renderWho, openPad, closePad } from '../app.js';
-import { installLilacView } from '../ui/lilac.js';
+import * as cloudView from '../app.js?v=2';
+import { openCover, closeCover, openQuick, closeQuick, renderWho, openPad, closePad } from '../app.js?v=2';
+import { installLilacView } from '../ui/lilac.js?v=2';
 import { registerInlineHandlers } from '../shared/inline-bridge.mjs';
 /* In-memory implementation of the existing storage contract. No production API. */
 const initialCategories = [
