@@ -72,8 +72,9 @@
 .settings-sec { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
 .settings-sec:last-child { border-bottom: none; }
 .settings-sec h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
-.hint { color: var(--muted); font-size: var(--text-small); line-height: 1.5; }
-.hint b { color: var(--text); }
+.free-app main { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+.settings-sec p { font-size: var(--text-body); line-height: 1.5; }
+.settings-sec p:empty { display: none; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .cat-row { display: flex; align-items: center; gap: 8px; }
@@ -155,14 +156,14 @@
 
     <section class="settings-sec">
       <h3>Резервная копия</h3>
-      <p class="hint" id="backup-status"></p>
+      <p id="backup-status"></p>
       <button id="confirm-export-btn" class="btn-link hidden" onclick="confirmExportSaved()">Я сохранил файл вне браузера</button>
       <div class="btn-row">
         <button class="btn-primary btn-sm" onclick="exportBackup()">Сохранить копию</button>
         <button class="btn-secondary btn-sm" onclick="pickImportFile()">Восстановить из файла</button>
       </div>
       <div id="autosave-block" class="hidden">
-        <p class="hint" id="autosave-status"></p>
+        <p id="autosave-status"></p>
         <div class="btn-row" id="autosave-actions" style="margin-top:8px"></div>
       </div>
       <button id="undo-import-btn" class="btn-link hidden" onclick="undoImport()">
@@ -178,14 +179,14 @@
 
     <section class="settings-sec">
       <h3>Где хранятся данные</h3>
-      <p class="hint" id="storage-status"></p>
+      <p id="storage-status"></p>
     </section>
     <section class="settings-sec">
       <h3>О приложении</h3>
-      <p class="hint">Бюджет · 0.1.0 beta. Бесплатная версия без синхронизации.</p>
+      <p>Бюджет · 0.1.0 beta. Бесплатная версия без синхронизации.</p>
       <button class="btn-link" onclick="showGuide()">Справка и установка</button>
       <a href="https://github.com/Rustam-Bikiteev/budget-app/issues/new" target="_blank" rel="noopener noreferrer">Сообщить об ошибке на GitHub</a>
-      <p class="hint">Обращение будет публичным. Укажите версию, браузер и шаги ошибки. Не прикладывайте копию бюджета или личные суммы.</p>
+      <p>Обращение будет публичным. Укажите версию, браузер и шаги ошибки. Не прикладывайте копию бюджета или личные суммы.</p>
     </section>
   </div>
 </div>

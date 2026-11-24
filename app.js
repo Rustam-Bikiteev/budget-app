@@ -441,7 +441,6 @@ function updateQuickSource() {
   $('q-source-fields').classList.toggle('hidden', !outsidePlan);
   $('q-actual-field').classList.toggle('hidden', outsidePlan);
   $('q-sum-label').textContent = outsidePlan ? 'Сумма, ₽' : 'План, ₽';
-  $('q-note').textContent = outsidePlan ? 'Сумма добавится к плану и факту выбранной траты.' : 'Новая запись появится в тратах.';
   const source = quickSources().find(s => s.id === $('q-source').value);
   const amount = parseSum($('q-sum').value, 0);
   const shortage = source && amount > 0 ? Math.max(0, amount - source.avail) : 0;
@@ -749,8 +748,7 @@ function renderPad() {
   $('pad-display').innerHTML = pad.expr === ''
     ? `<span class="pad-ph">${old ? fmtAbs(old) : '0 ₽'}</span>`
     : esc(pad.expr.replace(/([+\-])/g, ' $1 ').trim());
-  $('pad-preview').textContent = pad.expr === '' ? 'введи новую сумму или +сколько добавить'
-    : v === null ? 'допиши число'
+  $('pad-preview').textContent = pad.expr === '' || v === null ? ''
     : v < 0 ? `было ${money(old)} → меньше нуля нельзя`
     : `было ${money(old)} → станет ${money(v)}`;
   $('pad-chips').innerHTML = padChips().map(c =>

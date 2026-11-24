@@ -163,7 +163,6 @@
       <select id="q-source" aria-describedby="q-source-note" onchange="updateQuickSource()"></select>
       <p id="q-source-note" aria-live="polite"></p>
     </div>
-    <p id="q-note">Новая запись появится в тратах.</p>
     <p id="q-error" role="alert"></p>
     <div class="confirm-btns">
       <button type="button" class="confirm-cancel" onclick="closeQuick()">Отмена</button>
@@ -214,7 +213,6 @@
           </div>
           <dl class="budget-legend" id="h-legend"></dl>
         </div>
-        <p class="budget-explanation">Выделено на траты = план + перерасходы. Остаток в таблице = план − факт, включая минус по перерасходам.</p>
       </details>
       <div class="budget-fields" role="group" aria-label="Параметры бюджета">
         <div class="budget-field"><label for="income-inp">Доход</label>
@@ -263,16 +261,11 @@
         <h2>Траты спринта</h2>
         <span class="sub" id="planned-total"></span>
       </div>
-      <p class="budget-explanation">План задаёте вы. Остаток = план − факт; перерасход уменьшает итог. В сводке «Выделено на траты» перерасход добавлен к плану.</p>
       <div class="cat-tabs" id="cat-tabs"></div>
       <div class="expense-key" aria-label="Колонки трат"><span class="key-plan">План</span><span class="key-actual">Факт</span><span class="key-left">Осталось</span></div>
       <div class="thead r-plan"><div></div><div>Название</div><div class="r">План</div><div class="r">Факт</div><div class="r">Осталось</div><div></div><div></div></div>
       <div id="planned-body"></div>
       <div class="tfoot r-plan hidden" id="planned-foot"></div>
-      <details class="hint">
-        <summary>Как вводить суммы</summary>
-        <p><code>1200+800</code> задаёт сумму, <code>+500</code> добавляет, <code>−300</code> вычитает.</p>
-      </details>
       <div class="add-row split">
         <button class="add-btn" onclick="runSaveAction(() => addEntry('planned'))">+ Запланировать</button>
         <button class="add-btn quick" onclick="openQuick(true)">Потратил вне плана</button>

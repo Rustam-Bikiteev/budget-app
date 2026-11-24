@@ -84,7 +84,7 @@ Node.js 24.14.1; Playwright 1.65.1; test-only PostgreSQL WASM PGlite 0.6.0.
   `shared/core.js` + `app.js` + `ui/lilac.js`, `design/demo.js` в памяти.
 - `/free/`: настоящая IndexedDB, reload, JSON download/import в чистое хранилище.
 - UX: demo-план/выделено/остатки, раскрытие дохода, подписи навигации, три шага
-  первого запуска; pending/reject/retry inline handlers обоих режимов, screenshots
+  первого запуска; нижние отступы облачной главной и `/free/`; pending/reject/retry inline handlers обоих режимов, screenshots
   desktop и mobile (320/390 px) в `test-results/`. Общие компоненты: фокус,
   числовой ввод, размеры кнопок, диалоги, состояния записи и отсутствие
   горизонтальной прокрутки.

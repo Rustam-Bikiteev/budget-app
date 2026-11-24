@@ -27,7 +27,7 @@ test('free: module shell upgrades with an open tab and reloads saved data offlin
     });
     await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toContain('/free/sw.js');
     await expect(name).toHaveValue('Открытый ввод');
-    expect(await page.evaluate(() => caches.keys())).toEqual(expect.arrayContaining(['budget-free-v6', 'another-app-smoke']));
+    expect(await page.evaluate(() => caches.keys())).toEqual(expect.arrayContaining(['budget-free-v7', 'another-app-smoke']));
     expect(await page.evaluate(() => caches.keys())).not.toContain('budget-free-v4');
     await context.setOffline(true);
     await page.reload();

@@ -128,7 +128,7 @@ function readStore(page, name) {
 test('cloud: clear plan labels, discoverable editor and failed entry save can retry', async ({ page }, testInfo) => {
   await page.goto('/design/preview.html?theme=lilac');
   await expect(page.locator('#lilac-allocated')).toHaveText(/47\s*100/);
-  await expect(page.locator('#lilac-allocation-note')).toHaveText(/46\s*500.*600.*47\s*100/);
+  await expect(page.locator('.budget-explanation')).toHaveCount(0);
   await expect(page.getByText('Изменить доход и накопления', { exact: false })).toBeVisible();
   await page.getByText('Изменить доход и накопления', { exact: false }).click();
   const income = page.locator('#income-inp');
@@ -143,6 +143,14 @@ test('cloud: clear plan labels, discoverable editor and failed entry save can re
   await expect(page.locator('.lilac-bottom-nav').getByRole('button', { name: 'Будущие покупки', exact: true })).toBeVisible();
   await expect(page.locator('.lilac-bottom-nav').getByRole('button', { name: 'Аналитика', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const homeEnd = await page.locator('main').evaluate(main => ({
+    content: main.getBoundingClientRect().bottom,
+    quickAdd: document.querySelector('#expense-fab').getBoundingClientRect().top,
+    scrolled: scrollY > 0,
+  }));
+  expect(homeEnd.quickAdd - homeEnd.content).toBeGreaterThanOrEqual(0);
+  if (homeEnd.scrolled) expect(homeEnd.quickAdd - homeEnd.content).toBeLessThanOrEqual(12);
   await page.screenshot({ path: testInfo.outputPath('cloud-home-mobile.png'), fullPage: true });
   await page.locator('.lilac-bottom-nav').getByRole('button', { name: 'Будущие покупки', exact: true }).click();
   await expect(page.locator('.lilac-page-title')).toHaveText('Будущие покупки');
@@ -152,6 +160,7 @@ test('cloud: clear plan labels, discoverable editor and failed entry save can re
   await expect(page.locator('#lilac-left')).toHaveText(/23\s*950/);
   await page.screenshot({ path: testInfo.outputPath('cloud-analytics-mobile.png'), fullPage: true });
   await page.locator('.lilac-bottom-nav').getByRole('button', { name: 'Траты', exact: true }).click();
+  await expect(page.getByText('Как вводить суммы', { exact: true })).toHaveCount(0);
   const actual = page.locator('#planned-body [data-f=actual]').first();
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
@@ -232,6 +241,7 @@ test('cloud: clear plan labels, discoverable editor and failed entry save can re
 test('free: three-step guide, pending storage, rejection and retry', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/free/');
+  await expect(page.locator('main')).toHaveCSS('padding-bottom', '12px');
   await expect(page.locator('#guide')).toBeVisible();
   await expect(page.locator('#guide .guide-steps li')).toHaveCount(3);
   await expect(page.locator('#guide')).toContainText('только в этом браузере');

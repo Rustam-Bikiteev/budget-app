@@ -13,7 +13,7 @@ function setup(overrides = {}) {
   const cache = { addAll: async urls => { shell = urls; }, match: async () => undefined };
   vm.runInNewContext(source, {
     self: { addEventListener: (name, fn) => { handlers[name] = fn; }, skipWaiting() {}, clients: { claim() {} } },
-    caches: { keys: async () => ['another-app-v1', 'budget-free-v1', 'budget-free-v5', 'budget-free-v6'],
+    caches: { keys: async () => ['another-app-v1', 'budget-free-v1', 'budget-free-v5', 'budget-free-v6', 'budget-free-v7'],
       delete: async key => { deleted.push(key); }, open: async () => cache },
     fetch: async () => { throw Error('Offline'); },
     location: { origin: 'https://example.test' }, URL, Response,
@@ -27,7 +27,7 @@ test('activation removes only old Budget caches', async () => {
   let done;
   app.handlers.activate({ waitUntil: p => { done = p; } });
   await done;
-  assert.deepEqual(app.deleted, ['budget-free-v1', 'budget-free-v5']);
+  assert.deepEqual(app.deleted, ['budget-free-v1', 'budget-free-v5', 'budget-free-v6']);
 });
 
 test('installation caches directory and explicit HTML entry points', async () => {

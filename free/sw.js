@@ -1,7 +1,7 @@
 // Network-first: свежая версия при наличии сети, кэш — только для офлайна.
 // Данные пользователя здесь не хранятся, они в IndexedDB.
 const CACHE_PREFIX = 'budget-free-';
-const CACHE = CACHE_PREFIX + 'v6';
+const CACHE = CACHE_PREFIX + 'v7';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', '../shared/core.js', '../shared/domain.mjs', '../shared/inline-bridge.mjs', '../storage/indexeddb.mjs', '../shared/core.css', '../icon-192.png', '../icon-512.png'];
 
 self.addEventListener('install', e => {

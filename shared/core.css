@@ -152,7 +152,6 @@ header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
 #sync-dot.err { background: var(--red); color: var(--on-action); }
 .free-app:has(#guide:not(.hidden)) #banner.info { display: none; }
 .guide-steps { padding-left: 22px; line-height: 1.6; }
-.budget-explanation { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 12px 18px; }
 
 /* ── Main ── */
 main {

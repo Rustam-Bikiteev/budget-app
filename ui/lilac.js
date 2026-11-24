@@ -20,7 +20,6 @@ let lilacChartMode='entries';
 const lilacLogin=document.querySelector('.login-box');
 if(lilacLogin&&!lilacLogin.querySelector('.login-brand')){
   lilacLogin.querySelector('h2').insertAdjacentHTML('beforebegin','<span class="login-brand" aria-hidden="true">б.</span>');
-  lilacLogin.querySelector('h2').insertAdjacentHTML('afterend','<p class="login-caption">Место, где деньги обретают план</p>');
 }
 const lilacTop=document.createElement('div');
 lilacTop.className='lilac-only lilac-topbar';
@@ -53,13 +52,12 @@ lilacOverview.innerHTML=`
   <button class="lilac-asset lilac-expenses lilac-notch" onclick="lilacRoute('planned')">
     <span class="lilac-asset-head"><i>${lilacSVG('swap')}</i><span>Траты <small id="lilac-plan-count"></small></span><span class="lilac-asset-arrow">${lilacSVG('arrow')}</span></span>
     <span class="lilac-asset-foot"><span><small>Выделено на траты</small><b id="lilac-allocated"></b></span><span><small>Потрачено</small><b id="lilac-spent"></b></span><span class="lilac-chip" id="lilac-spent-share"></span></span>
-  </button>
-  <p class="budget-explanation"><span id="lilac-allocation-note"></span><br>Выделено = план + перерасходы. Остаток в таблице = план − факт и включает минус по перерасходам.</p>`;
+  </button>`;
 lilacMain.prepend(lilacOverview);
 // Move the actual editable inputs, including their original save handlers.
 $('lilac-budget-editor').append(document.querySelector('.budget-fields'));
 const lilacAnalytics=document.createElement('section');lilacAnalytics.className='lilac-only lilac-analytics';
-lilacAnalytics.innerHTML=`<div class="lilac-stat-pills" id="lilac-stat-pills"></div><div class="lilac-chart-tabs"><button data-chart="entries" onclick="lilacSetChart('entries')" aria-pressed="true">По тратам</button><button data-chart="categories" onclick="lilacSetChart('categories')" aria-pressed="false">По категориям</button></div><div class="lilac-bars" id="lilac-bars" role="group" aria-label="План и факт трат"></div><div class="lilac-chart-legend"><span><i></i>В плане</span><span><i></i>Перерасход</span><span><i></i>Осталось</span></div><div class="lilac-chart-total"><span>Осталось без перерасходов</span><b id="lilac-left"></b></div><p class="budget-explanation">Сумма положительных остатков по тратам. Перерасход уже учтён в выделенной сумме; в таблице он уменьшает итоговый остаток.</p>`;
+lilacAnalytics.innerHTML=`<div class="lilac-stat-pills" id="lilac-stat-pills"></div><div class="lilac-chart-tabs"><button data-chart="entries" onclick="lilacSetChart('entries')" aria-pressed="true">По тратам</button><button data-chart="categories" onclick="lilacSetChart('categories')" aria-pressed="false">По категориям</button></div><div class="lilac-bars" id="lilac-bars" role="group" aria-label="План и факт трат"></div><div class="lilac-chart-legend"><span><i></i>В плане</span><span><i></i>Перерасход</span><span><i></i>Осталось</span></div><div class="lilac-chart-total"><span>Осталось без перерасходов</span><b id="lilac-left"></b></div>`;
 lilacMain.append(lilacAnalytics);
 const lilacAccount=document.createElement('section');lilacAccount.className='lilac-only lilac-account';
 lilacAccount.innerHTML='<div class="lilac-account-action" data-account-action="refresh"><span>Обновить данные</span></div><div class="lilac-account-action" data-account-action="logout"><span>Выйти из аккаунта</span></div>';
@@ -131,8 +129,6 @@ function lilacRender(){
   set('lilac-mand-count',`${state.entries.filter(e=>e.type==='mandatory').length}`);
   set('lilac-plan-count',`${state.entries.filter(e=>e.type==='planned').length}`);
   set('lilac-left',money(k.allocated-k.spent));
-  const plan=sumBy(state.entries.filter(e=>e.type==='planned'),e=>e.planned);
-  set('lilac-allocation-note',`План трат ${money(plan)} + перерасход ${money(k.allocated-plan)} = выделено ${money(k.allocated)}.`);
   const circleTotal=sumBy([k.mand,state.saved,k.allocated,k.free],value=>Math.max(0,value));
   $('lilac-stat-pills').innerHTML=[['Доход',state.income],['Отложить',state.saved],['Платежи',k.mand],['Потрачено',k.spent]].map(([label,value])=>`<div><span>${label}<small class="lilac-stat-share">${chartShare(value,circleTotal)}</small></span><b>${money(value)}</b></div>`).join('');
   lilacRenderBars();
