@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="shared/core.css?v=6">
-<link rel="stylesheet" href="app.css?v=19">
+<link rel="stylesheet" href="app.css?v=20">
 <style>
 /* своё у версии с Supabase; общий интерфейс в shared/core.css */
 .logout-btn, .refresh-btn {
@@ -302,7 +302,7 @@ import { registerInlineHandlers } from './shared/inline-bridge.mjs';
 import * as cloudView from './app.js?v=2';
 import { installLilacView } from './ui/lilac.js?v=2';
 import { createSupabaseAdapter } from './storage/supabase.mjs';
-import { installFamily } from './ui/family.mjs?v=2';
+import { installFamily } from './ui/family.mjs?v=3';
 const sb = window.supabase.createClient('https://szegeqfiitlonzlpeohx.supabase.co', 'sb_publishable_DW_bjZP12NIX2HJA8IVy2w__lffl5yi', {
   auth: { persistSession: true, autoRefreshToken: true },
 });

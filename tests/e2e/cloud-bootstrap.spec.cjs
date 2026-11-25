@@ -129,8 +129,11 @@ test('owner invite retry, household/category settings and mobile account use sco
   const addedInput = page.getByRole('textbox', { name: 'Название категории' }).last();
   await addedInput.fill('Настя');
   const addedId = await addedInput.getAttribute('data-family-cat');
+  const colorPicker = page.locator(`[data-family-color="${addedId}"]`);
+  await expect(colorPicker).toHaveValue('#7546c7');
+  await colorPicker.fill('#007d70');
   const withCategory = { ...updated, revision: 3, settings: { categories: [
-    ...updated.settings.categories, { id: addedId, name: 'Настя', color: '#8b80c9' },
+    ...updated.settings.categories, { id: addedId, name: 'Настя', color: '#007d70' },
   ] } };
   await page.evaluate(updated => {
     cloudTest.replies.push({ name: 'budget_mutate', operation: 'update_settings', data: { row: updated, month: null } });
@@ -138,6 +141,16 @@ test('owner invite retry, household/category settings and mobile account use sco
   await page.getByRole('button', { name: 'Сохранить настройки семьи', exact: true }).click();
   await expect(page.locator('#save-status')).toHaveAttribute('data-state', 'saved');
   await expect(page.locator(`[data-family-cat="${addedId}"]`)).toHaveValue('Настя');
+  await expect(colorPicker).toHaveValue('#007d70');
+  const categoryRow = page.locator('.family-category-row').last();
+  await expect(categoryRow).toHaveCSS('display', 'grid');
+  await expect(page.locator('#family-settings fieldset')).toHaveCSS('border-top-width', '0px');
+  const inputBox = await categoryRow.getByRole('textbox', { name: 'Название категории' }).boundingBox();
+  const removeBox = await categoryRow.getByRole('button').boundingBox();
+  expect(removeBox.x).toBeGreaterThanOrEqual(inputBox.x + inputBox.width);
+  expect(removeBox.y).toBeLessThan(inputBox.y + inputBox.height);
+  expect(removeBox.width).toBeGreaterThanOrEqual(44);
+  await page.screenshot({ path: 'test-results/cloud-account-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'Удалить категорию' }).last().click();
   await expect(page.locator('#family-category-note')).toContainText('«Дом»');
   await page.evaluate(updated => {
@@ -151,7 +164,6 @@ test('owner invite retry, household/category settings and mobile account use sco
     { expected_revision: 3, name: 'Наш дом', settings: updated.settings },
   ]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'test-results/cloud-account-mobile.png', fullPage: true });
 });
 
 test('family/account changes clear state and ignore late reads, writes and old Realtime callbacks', async ({ page }) => {

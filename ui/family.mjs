@@ -4,7 +4,7 @@ import { cloudErrorMessage } from '../storage/supabase.mjs';
 // Owns Auth, selected household and generation-scoped Realtime lifetime.
 export function installFamily({ client: sb, storage }) {
   let epoch = 0, user = null, selected = null, families = [], channel = null;
-  const newCategoryColors = ['#8b80c9', '#427c75', '#a25c77', '#5f75ac', '#9a663e'];
+  const newCategoryColors = ['#7546c7', '#007d70', '#bf4878', '#2163ba', '#b45d19', '#497421'];
   const requests = new Map();
   const pendingKey = 'budget-invite';
   const fragment = new URLSearchParams(location.hash.slice(1));
@@ -94,7 +94,11 @@ export function installFamily({ client: sb, storage }) {
     }
     add('#income-inp', state.income, 'Доход'); add('#saved-inp', state.saved, 'Отложено');
     add('#family-edit-name', selected.name, 'Название семьи');
-    selected.settings.categories.forEach(cat => add(`[data-family-cat="${CSS.escape(cat.id)}"]`, cat.name, 'Категория'));
+    selected.settings.categories.forEach(cat => {
+      const id = CSS.escape(cat.id);
+      add(`[data-family-cat="${id}"]`, cat.name, 'Категория');
+      add(`[data-family-color="${id}"]`, cat.color.toLowerCase(), 'Цвет категории');
+    });
     return values;
   }
   function restoreDraft(values) {
@@ -153,9 +157,14 @@ export function installFamily({ client: sb, storage }) {
     }
     function append(category) {
       const row = document.createElement('div');
-      row.innerHTML = `<label>Название категории<input required maxlength="100"></label>
-        <button type="button" data-remove-category>Удалить категорию</button>`;
-      const input = row.querySelector('input');
+      row.className = 'family-category-row';
+      row.innerHTML = `<input type="color" class="family-category-color" aria-label="Цвет категории">
+        <input aria-label="Название категории" placeholder="Название категории" required maxlength="100">
+        <button type="button" data-remove-category aria-label="Удалить категорию"><span aria-hidden="true">×</span></button>`;
+      const color = row.firstElementChild;
+      color.dataset.familyColor = category.id;
+      color.value = category.color;
+      const input = row.querySelector('input[required]');
       input.dataset.familyCat = category.id;
       input.value = category.name;
       input.oninput = () => { input.setCustomValidity(''); updateControls(); };
@@ -164,14 +173,15 @@ export function installFamily({ client: sb, storage }) {
         row.remove();
         updateControls();
       };
-      rows.set(category.id, { category, input, row });
+      rows.set(category.id, { category, input, color, row });
       list.append(row);
       return input;
     }
     selected.settings.categories.forEach(append);
     add.onclick = () => {
       if (rows.size >= 100) return;
-      const color = newCategoryColors.find(value => ![...rows.values()].some(({ category }) => category.color === value)) || newCategoryColors[0];
+      const color = newCategoryColors.find(value => ![...rows.values()].some(row => row.color.value === value))
+        || newCategoryColors[rows.size % newCategoryColors.length];
       append({ id: crypto.randomUUID(), name: '', color }).focus();
       updateControls();
     };
@@ -181,18 +191,21 @@ export function installFamily({ client: sb, storage }) {
   let categoryEditor;
   function renderAccount() {
     categoryEditor = null;
-    account.innerHTML = `<h2>${esc(selected.name)}</h2><p>${selected.role === 'owner' ? 'Владелец' : 'Участник'}</p>
-      <button id="family-switch" type="button">Выбрать семейный бюджет</button><div id="family-owner"></div><p id="account-error" role="alert"></p>`;
+    account.innerHTML = `<section class="family-card">
+      <div class="family-card-heading"><h2>${esc(selected.name)}</h2><p>${selected.role === 'owner' ? 'Владелец' : 'Участник'}</p></div>
+      <button id="family-switch" class="family-action" type="button">Выбрать семейный бюджет<span aria-hidden="true">›</span></button>
+      </section><div id="family-owner"></div><p id="account-error" role="alert"></p>`;
     $('family-switch').onclick = () => {
       clear(); const stamp = epoch;
       list(false).catch(error => { if (stamp === epoch) { $('family-error').textContent = message(error); onboarding(); } });
     };
     if (selected.role !== 'owner') return;
-    $('family-owner').innerHTML = `<form id="family-settings"><label>Название семьи<input id="family-edit-name" required maxlength="120" value="${esc(selected.name)}"></label>
+    $('family-owner').innerHTML = `<form id="family-settings" class="family-card"><label>Название семьи<input id="family-edit-name" required maxlength="120" value="${esc(selected.name)}"></label>
       <fieldset><legend>Категории</legend><div id="family-categories"></div>
-      <button id="family-add-category" type="button">Добавить категорию</button>
+      <button id="family-add-category" class="family-action" type="button"><span aria-hidden="true">+</span>Добавить категорию</button>
       <p id="family-category-note" aria-live="polite"></p></fieldset>
-      <button class="btn-primary" type="submit">Сохранить настройки семьи</button></form><button id="family-invite" type="button">Создать приглашение</button>
+      <button class="btn-primary" type="submit">Сохранить настройки семьи</button></form>
+      <button id="family-invite" class="lilac-account-action" type="button">Создать приглашение<span aria-hidden="true">›</span></button>
       <label id="invite-result" class="hidden">Одноразовая ссылка, действует сутки. Скопируйте и передайте лично.<input id="invite-link" readonly aria-label="Ссылка приглашения"></label>`;
     const form = $('family-settings');
     const editor = categoryEditor = editCategories(form);
@@ -207,7 +220,10 @@ export function installFamily({ client: sb, storage }) {
         blank.input.reportValidity();
         return;
       }
-      const categories = rows.map(({ category, input }) => ({ ...category, name: input.value.trim() }));
+      const categories = rows.map(({ category, input, color }) => ({
+        ...category, name: input.value.trim(),
+        color: color.value === category.color.toLowerCase() ? category.color : color.value,
+      }));
       const removed = family.settings.categories.some(cat => !editor.rows.has(cat.id));
       const name = $('family-edit-name').value.trim();
       const controls = [...form.elements].filter(control => !control.disabled);
@@ -290,7 +306,7 @@ export function installFamily({ client: sb, storage }) {
     const stamp = epoch, draft = captureDraft();
     const added = categoryEditor ? [...categoryEditor.rows.values()]
       .filter(({ category }) => !selected.settings.categories.some(cat => cat.id === category.id))
-      .map(({ category, input }) => ({ ...category, name: input.value })) : [];
+      .map(({ category, input, color }) => ({ ...category, name: input.value, color: color.value })) : [];
     const removed = categoryEditor ? selected.settings.categories.filter(cat => !categoryEditor.rows.has(cat.id)) : [];
     const details = await rpc('budget_household_details', { household_id: selected.id });
     selected = { ...details, role: selected.role }; setCategories(details.settings.categories);
